@@ -33,11 +33,11 @@ const B=D.blocks;B.forEach(prep);
 const res=[];
 for(const job of A){
   const idx=new Map(B.map((b,i)=>[b.id,i]));const T=job.territory.map(id=>idx.get(id));
-  const r=calc(D,B,T,D.params,D.scenarios,job.kit);
+  const r=calc(D,B,T,{...D.params,...job.params},D.scenarios,job.kit);
   const out={};for(const [n,o] of Object.entries(r.out))out[n]={N:o.N,J:o.J,K:o.K,KA:o.KA,Kall:o.Kall,Jcity:o.Jcity,Ncity:o.Ncity,acc:o.acc,
     sP:o.sP,kP:o.kP,sT:o.sT,kT:o.kT,sNo:o.sNo,kNo:o.kNo,prov:o.prov||null,
     concl:n==='Как есть'?null:conclusion(o,r.out['Как есть'],D.params,r.city)};
-  res.push({kit:r.kit,kitE:r.kitE,E:r.E.map(i=>B[i].id),out});
+  res.push({kit:r.kit,kitE:r.kitE,E:r.E.map(i=>B[i].id),accessLabel:r.accessLabel,effByFunction:r.effByFunction,out});
 }
 process.stdout.write(JSON.stringify(res));
 '''
@@ -177,14 +177,22 @@ const res=document.getElementById('res').innerHTML,full=document.getElementById(
 document.getElementById('scenarioMode').value='paired';
 document.getElementById('scenarioMode').onchange();
 const joint=document.getElementById('res').innerHTML;
+const access=document.getElementById('accessMode'),threshold=document.getElementById('walkMinutes');
+access.value='walk';access.onchange();
+const network=document.getElementById('res').innerHTML;
+threshold.value=21;threshold.onchange();
+const rejected=last===null&&document.getElementById('geojson').disabled;
+delete D0.walk_access;use(D0);
+const fallback=access.value==='geometry'&&document.getElementById('walkOption').disabled;
 process.stdout.write(JSON.stringify({res,full,kit:document.getElementById('kitSrc').textContent,
-  joint,info:document.getElementById('info').innerHTML,warn:document.getElementById('warn').innerHTML}));
+  joint,network,rejected,fallback,info:document.getElementById('info').innerHTML,warn:document.getElementById('warn').innerHTML}));
 ''', encoding='utf-8')
     r = subprocess.run([NODE, str(js), data], capture_output=True, timeout=600)
     assert r.returncode == 0, r.stderr.decode('utf-8', 'replace')
     out = json.loads(r.stdout.decode('utf-8'))
     assert 'Вывод' in out['res'] and 'Жители на территории' in out['res'] and 'Ж+К+ОД' in out['res']
     assert '[эмп.]' not in out['res'] and all(name in out['joint'] for name in paired_scenarios())
+    assert 'пешком ≤ 10 мин' in out['network'] and out['rejected'] and out['fallback']
     assert 'обеспеченность окружения в пределах доступности' in out['full']
     assert 'СП 42.13330.2016' in out['kit']                       # Высоцк и Гатчина: КИТ по СП (kit_sp_row)
     assert 'раз плотнее' in out['info'] or 'раз реже' in out['info']

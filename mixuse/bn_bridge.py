@@ -95,7 +95,7 @@ def prepare(cfg, city, say=print):
     """Точный расчёт включён (provision.exact = да): готовит данные города для blocksnet, если их ещё нет —
     файл OpenStreetMap (скачивает по ссылке), пешеходный граф и матрица доступности (access), точный расчёт
     «как есть» (provision). Выполняется в отдельном окружении с blocksnet; один раз на город."""
-    from .provision_bn import BlocksnetError
+    from .provision_bn import BlocksnetError, load_matrix
     from .provision_estimate import load_page_data
     try:
         if load_page_data(cfg, city) is not None:
@@ -110,20 +110,24 @@ def prepare(cfg, city, say=print):
                              'подготовить_город.bat в папке программы (один раз: ставит blocksnet и готовит данные города '
                              f'по настройкам {os.path.relpath(cfg_path, root)}) и выполните ноутбук снова — '
                              'или выключите точный расчёт в анкете (точный_расчёт: включить=False).')
-    osm = (cfg.get('provision') or {}).get('osm_file')
-    if osm and osm.startswith(('http://', 'https://')):
-        from .osm_files import download
-        path = os.path.join(root, 'data', 'osm', osm.rstrip('/').split('/')[-1])
-        if not os.path.exists(path):
-            say(f'Школы и сады: скачиваю файл OpenStreetMap {osm} (с докачкой)…')
-            download(osm, path, say=say)
-        osm = path
+    steps = []
+    try:
+        load_matrix(cfg, city['table']['block_id'], graph_type='walk')
+    except (BlocksnetError, OSError, ValueError):
+        osm = (cfg.get('provision') or {}).get('osm_file')
+        if osm and osm.startswith(('http://', 'https://')):
+            from .osm_files import download
+            path = os.path.join(root, 'data', 'osm', osm.rstrip('/').split('/')[-1])
+            if not os.path.exists(path):
+                say(f'Школы и сады: скачиваю файл OpenStreetMap {osm} (с докачкой)…')
+                download(osm, path, say=say)
+            osm = path
+        steps.append(('граф и матрица доступности (один раз на город; от минуты до часа)',
+                      ['access', cfg_path, '--retries', '0'] + (['--osm-file', osm] if osm else [])))
     env = dict(os.environ, PYTHONIOENCODING='utf-8')
     pkg = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     env['PYTHONPATH'] = pkg + os.pathsep + env.get('PYTHONPATH', '')
-    steps = [('граф и матрица доступности (один раз на город; от минуты до часа)',
-              ['access', cfg_path, '--retries', '0'] + (['--osm-file', osm] if osm else [])),
-             ('точный расчёт «как есть»', ['provision', cfg_path])]
+    steps.append(('точный расчёт «как есть»', ['provision', cfg_path]))
     for title, args in steps:
         say(f'Школы и сады: {title}…')
         r = subprocess.run([py, '-m', 'mixuse'] + args, capture_output=True, env=env, cwd=root)

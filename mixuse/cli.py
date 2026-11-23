@@ -22,10 +22,11 @@ from .blocks import load_layers, build_table, DataError
 from .compare import compare, TerritoryError, KitError
 from .checks import check_config, sensitivity, builtin_sensitivity, estimates_check, stats_check, threshold_check
 from . import export
+from .walk_access import DEFAULT_WALK_MINUTES, WalkAccessError, load_walk_access
 from .init_config import make_config
 from .data_report import data_report
 
-USER_ERRORS = (ConfigError, CRSError, DataError, TerritoryError, KitError, FileNotFoundError)
+USER_ERRORS = (ConfigError, CRSError, DataError, TerritoryError, KitError, WalkAccessError, FileNotFoundError)
 
 
 def _say(*a):
@@ -138,13 +139,18 @@ def cmd_compare(args):
     L, city = _prepare(cfg)
     P, SCN, T = cfg['params'], cfg['scenarios'], cfg['territory']
     out = _out_dir(cfg, args); code = cfg['name']
-    table, info, det = compare(city, T, P, SCN)
+    walk = None
+    if args.walk_minutes is not None:
+        walk, reason = load_walk_access(cfg, city['table']['block_id'], args.walk_minutes)
+        if walk is None:
+            _say(f'! Доступ к К и ОД: используется геометрическое расстояние. {reason}')
+    table, info, det = compare(city, T, P, SCN, walk_access=walk)
     from .bn_bridge import school_provision   # раздел 12: blocksnet здесь → окружение с blocksnet → оценка → запасной 4.7.3
     t0 = time.time()
     prov, prov_note = school_provision(cfg, city, T, det, near=args.near, say=_say)
     if prov:
         _say(f'Школы и сады: {prov.get("_source", "")} ({time.time() - t0:.0f} с)')
-        table, info, det = compare(city, T, P, SCN, prov=prov)
+        table, info, det = compare(city, T, P, SCN, prov=prov, walk_access=walk)
     warns = info.pop('предупреждения', [])
     if prov_note:
         warns.append(prov_note)
@@ -330,7 +336,9 @@ def cmd_page(args):
         pdat = None
     path = args.file or export.out_path(_out_dir(cfg, args), cfg['name'], 'для_страницы.json')
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-    export.web_json_v5(city, cfg, path, pdat, clip=args.clip)
+    export.web_json_v5(city, cfg, path, pdat, clip=args.clip,
+                       walk_minutes=DEFAULT_WALK_MINUTES if args.walk_minutes is None else args.walk_minutes,
+                       walk_max_minutes=args.walk_max_minutes, prefer_walk=args.walk_minutes is not None)
     _say('Школы и сады на странице: ' + ('оценка по точному расчёту blocksnet «как есть»' if pdat else
          'запасной расчёт 4.7.3 (точного расчёта «как есть» нет: команда provision в окружении с blocksnet)'))
     _say(f'Файл для страницы: {path} ({os.path.getsize(path) // 1024} КБ). Откройте страница/конструктор.html '
@@ -410,6 +418,7 @@ def build_parser():
         if name == 'compare':
             c.add_argument('--territory', help='номера кварталов территории через запятую (вместо territory: в настройках)')
             c.add_argument('--paired', action='store_true', help='сравнить два эмпирических и пять экспериментальных сценариев')
+            c.add_argument('--walk-minutes', type=float, help='К и ОД: порог пешеходного доступа, мин')
             c.add_argument('--show', help='какой вариант показать на карте')
             c.add_argument('--fast', action='store_true', help='без шагов 7 и 7б')
             c.add_argument('--near', type=float, help='обеспеченность blocksnet — только по кварталам не дальше стольких '
@@ -445,6 +454,8 @@ def build_parser():
     pg.add_argument('--file', help='куда записать файл (вместо results/<код>_для_страницы.json)')
     pg.add_argument('--territory', help='номера кварталов территории через запятую')
     pg.add_argument('--clip', type=float, help='только кварталы не дальше стольких метров от центра территории (большой город)')
+    pg.add_argument('--walk-minutes', type=float, help='выбрать пешеходный режим и задать порог для К и ОД, мин')
+    pg.add_argument('--walk-max-minutes', type=float, help='максимум подготовленного диапазона порогов, мин (по умолчанию 20)')
     pg.set_defaults(fn=cmd_page)
     pvv = sub.add_parser('provision-variants', help='служебная: точный расчёт школ и садов по вариантам (для bn_bridge)')
     pvv.add_argument('config'); pvv.add_argument('job'); pvv.add_argument('out_json')

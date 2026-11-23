@@ -1,4 +1,4 @@
-"""Эталоны правил v5 (tests/etalon/v5/, этап 5) и исторические сценарии ноутбука Высоцка.
+"""Эталоны правил v5 и исторические сценарии ноутбука Высоцка и Гатчины.
 
 Эталоны посчитаны командой `python -m mixuse compare configs/<код>.yaml --out tests/etalon/v5/<код>` (19.11.2026).
 Петербург: проверяются таблица кварталов, сравнение, шаг 7 и 4.8.3–4.8.4; шаг 7б и 4.8.5 (по 3–4 пересчёта
@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from conftest import ROOT, ETALON_V5, same_strings
+from conftest import ROOT, ETALON_V5, HISTORICAL_SCENARIOS, same_strings
 from test_notebook import run_notebook
 from mixuse.config import load_config
 from mixuse.blocks import load_layers, build_table
@@ -30,10 +30,9 @@ def ref(code, name, **kw):
 
 
 def notebook_reference_path(code, filename):
-    if code == 'vysotsk':
-        legacy = os.path.join(ETALON, '..', 'v5_legacy', code, filename)
-        if os.path.exists(legacy):
-            return legacy
+    legacy = os.path.join(ETALON, '..', 'v5_legacy', code, filename)
+    if os.path.exists(legacy):
+        return legacy
     return os.path.join(ETALON, code, filename)
 
 
@@ -57,6 +56,9 @@ def run(request):
     cfg = load_config(os.path.join(ROOT, 'configs', f'{code}.yaml'))
     if not os.path.exists(cfg['blocks']):
         pytest.skip(f'нет данных набора {code}')
+    if code == 'spb_full':
+        # Эталоны Петербурга зафиксированы до обновления долей по умолчанию.
+        cfg['scenarios'] = HISTORICAL_SCENARIOS
     L = load_layers(cfg, cfg['_groups'])
     city = build_table(L, cfg, cfg['params'], cfg['_groups'])
     return code, cfg, L, city

@@ -11,6 +11,7 @@ import pandas as pd
 from .geometry import dist_points_to_polys
 from .groups import FUNCS
 from .scenarios import RESERVED_SCENARIO_NAMES, normalize
+from .walk_access import walk_neighbors
 
 
 class TerritoryError(UserMessage, ValueError):
@@ -42,9 +43,9 @@ def environment(city, T, R):
     return E, inT, distT
 
 
-def compare(city, T_ids, P, SCN, prov=None):
+def compare(city, T_ids, P, SCN, prov=None, *, walk_access=None):
     """Шаги 5–6: окружение и сравнение вариантов (compare_v5). Возвращает (подробная таблица, сводка, данные)."""
-    return compare_v5(city, T_ids, P, SCN, prov)
+    return compare_v5(city, T_ids, P, SCN, prov, walk_access=walk_access)
 
 
 # ================================================================================================
@@ -116,7 +117,7 @@ def kit_line(kit, kitE):
     return f'{kit:.2f} / {kitE:.2f} ({how})'.replace('.', ',')
 
 
-def compare_v5(city, T_ids, P, SCN, prov=None):
+def compare_v5(city, T_ids, P, SCN, prov=None, *, walk_access=None):
     """Шаги 5–6 по правилам v5. Существующая застройка территории в варианте заменяется полностью (4.6.3).
 
         F = S_T · КИТ;  N = F · δ_Ж · k_liv ÷ q;  J = F · (δ_К ÷ a_К + δ_ОД ÷ a_ОД + δ_П ÷ a_П)        (4.6.2, 4.6.4)
@@ -144,8 +145,9 @@ def compare_v5(city, T_ids, P, SCN, prov=None):
     popT0, jobsT0, jobsT0_A = t['pop'].iloc[T].sum(), t['jobs'].iloc[T].sum(), t['jobs_A'].iloc[T].sum()
     pres = {g: t['есть_' + g].to_numpy() for g in FUNCS}
     near = {b: G.dist_from_point(*C[b]) <= P['r'] for b in E if t['pop'].iloc[b] > 0}
+    walk = walk_neighbors(walk_access, t['block_id'], near) if walk_access is not None else None
     Tpolys = [p for k in T for p in city['polys'][k]]
-    out, effect = {}, {}
+    out, effect, effect_by_function = {}, {}, {}
     for name, sh in [('Как есть', None)] + list(SCN.items()):
         if sh is None:
             N, J, J_A, d = popT0, jobsT0, jobsT0_A, None
@@ -157,23 +159,31 @@ def compare_v5(city, T_ids, P, SCN, prov=None):
             J_A = J
             capS, capK = t.cap_school.iloc[E].sum(), t.cap_kinder.iloc[E].sum()
         acc, eff = {}, {}
+        changes = {g: {} for g in ('К', 'ОД')}
         if d is not None:
             for g in FUNCS:
                 a = c = 0.0
                 for b, nb in near.items():
-                    before = bool((nb & pres[g]).any())
-                    after = bool((nb & pres[g] & ~inT).any()) or (d[g] > 0 and distT[b] <= P['r'])
+                    if walk is not None and g != 'П':
+                        destinations = walk[b]
+                        before = bool(pres[g][destinations].any())
+                        after = bool((pres[g][destinations] & ~inT[destinations]).any()
+                                     or (d[g] > 0 and inT[destinations].any()))
+                    else:
+                        before = bool((nb & pres[g]).any())
+                        after = bool((nb & pres[g] & ~inT).any()) or (d[g] > 0 and distT[b] <= P['r'])
                     p = t['pop'].iloc[b]
                     if g == 'П':
                         a += p if before else 0.0
                         c += p if after else 0.0
                         continue
                     if not before and after:
-                        a += p; eff[b] = eff.get(b, 0) + 1
+                        a += p; eff[b] = eff.get(b, 0) + 1; changes[g][b] = 1
                     if before and not after:
-                        c += p; eff[b] = eff.get(b, 0) - 1
+                        c += p; eff[b] = eff.get(b, 0) - 1; changes[g][b] = -1
                 acc[g] = (a, c)
         effect[name] = eff
+        effect_by_function[name] = changes
         nS, nK = (popE + N) * P['n_school'] / 1000, (popE + N) * P['n_kinder'] / 1000
         freeS = max(0.0, capS - popE * P['n_school'] / 1000)
         freeK = max(0.0, capK - popE * P['n_kinder'] / 1000)
@@ -195,6 +205,11 @@ def compare_v5(city, T_ids, P, SCN, prov=None):
     short = pd.DataFrame({n: short_column(out[n], out, to_city) for n in names})
     concl = {n: conclusion(out[n], out['Как есть'], P, to_city) for n in names[1:]}
     short.loc['Вывод'] = ['—'] + [concl[n] for n in names[1:]]
+    method = (f"OpenStreetMap, пешком ≤ {walk_access['threshold_minutes']:g} мин"
+              if walk_access is not None else f"геометрическое расстояние, r = {P['r']:g} м")
+    if walk_access is not None:
+        full.loc['Способ расчёта доступа к К и ОД'] = method
+        short.loc['Способ расчёта доступа к К и ОД'] = method
     info = {'кварталов на территории': len(T), 'площадь территории, га': round(float(S) / 1e4, 1),
             'КИТ варианта': kit, 'КИТ: откуда': kit_from,
             'КИТ окружения по данным (для сравнения)': None if kitE is None else round(kitE, 2),
@@ -203,6 +218,7 @@ def compare_v5(city, T_ids, P, SCN, prov=None):
             'кварталов в окружении': len(E), 'жителей в окружении': int(round(popE)), 'рабочих мест в окружении': int(round(jobsE)),
             'рабочих мест в окружении, нижняя граница': int(round(jobsE_A)),
             'K_ref — рабочих мест на жителя по всем данным (справочно)': round(float(jobsA / popA), 3) if popA else None,
+            'доступ к К и ОД': method,
             'школы и сады': (prov.get('_source', 'blocksnet (раздел 12)') if prov
                              else 'запасной расчёт 4.7.3: места и потребность внутри окружения')}
     if len(city['pts']['метро']):
@@ -217,7 +233,8 @@ def compare_v5(city, T_ids, P, SCN, prov=None):
                      f'(во всём наборе {fmt(popA)}). Варианты различаются объёмом застройки сильнее, чем сочетанием функций. '
                      'Проверьте КИТ или уменьшите территорию.')
     info['предупреждения'] = warns
-    return full, info, {'T': T, 'E': E, 'effect': effect, 'short': short, 'conclusions': concl, 'values': out, 'city': to_city}
+    return full, info, {'T': T, 'E': E, 'effect': effect, 'effect_by_function': effect_by_function,
+                        'access_method': method, 'short': short, 'conclusions': concl, 'values': out, 'city': to_city}
 
 
 def _acc(o, g):

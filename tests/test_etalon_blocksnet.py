@@ -13,7 +13,7 @@ import os
 import pandas as pd
 import pytest
 
-from conftest import ROOT, ETALON_BLOCKSNET, same_strings
+from conftest import ROOT, ETALON_BLOCKSNET, HISTORICAL_SCENARIOS, same_strings
 from mixuse.config import load_config
 from mixuse.blocks import load_layers, build_table
 from mixuse.compare import compare
@@ -47,7 +47,7 @@ def run(request):
 def test_comparison_with_blocksnet(run):
     """Краткая и подробная таблицы со строками 12.5 из blocksnet совпадают с эталоном."""
     code, cfg, city, mx = run
-    P, SCN, T = cfg['params'], cfg['scenarios'], cfg['territory']
+    P, SCN, T = cfg['params'], HISTORICAL_SCENARIOS, cfg['territory']
     _, _, det = compare(city, T, P, SCN)
     E_ids = city['table']['block_id'].iloc[det['E']].astype(int).tolist()
     prov = pb.variant_provision(city, mx, T, E_ids, det['values'])

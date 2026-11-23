@@ -9,6 +9,7 @@ import re
 import numpy as np
 import pandas as pd
 
+from .walk_access import DEFAULT_PREPARED_MINUTES, DEFAULT_WALK_MINUTES, load_walk_access
 
 
 def out_path(out_dir, code, suffix):
@@ -53,10 +54,15 @@ def blocks_geojson(city, path, det=None, SCN=None):
             props['территория'] = k in inT; props['окружение'] = k in inE
             for s in SCN:
                 props['доступ ' + s] = det['effect'][s].get(k, 0)
+                for group, changes in det.get('effect_by_function', {}).get(s, {}).items():
+                    props[f'изменение доступа {group} {s}'] = changes.get(k, 0)
         feats.append({'type': 'Feature', 'properties': props, 'geometry': _geom(city['orig'][k])})
+    collection = {'type': 'FeatureCollection', 'crs': {'type': 'name', 'properties': {'name': _blocks_crs(city)}},
+                  'features': feats}
+    if det and 'access_method' in det:
+        collection['способ расчёта доступа к К и ОД'] = det['access_method']
     with open(path, 'w', encoding='utf-8') as f:
-        json.dump({'type': 'FeatureCollection', 'crs': {'type': 'name', 'properties': {'name': _blocks_crs(city)}}, 'features': feats},
-                  f, ensure_ascii=False)
+        json.dump(collection, f, ensure_ascii=False)
     return path
 
 
@@ -103,7 +109,9 @@ def map_figure(city, det, show, R, title):
     ax.legend(handles=[Patch(color='#4b3f8f', label='территория'), Patch(facecolor='#e8e4d8', edgecolor='#333333', label=f'окружение {R:g} м'),
                        Patch(color='#3f9e5f', label='функции появились'), Patch(color='#f0a030', label='функции пропали')],
               loc='lower left', fontsize=9, frameon=False)
-    ax.set_title(f'{title}: вариант {show}', fontsize=11)
+    access = det.get('access_method', '')
+    caption = f'\nДоступ к К и ОД: {access}' if access.startswith('OpenStreetMap') else ''
+    ax.set_title(f'{title}: вариант {show}{caption}', fontsize=11)
     return fig
 
 
@@ -136,7 +144,8 @@ def buildings_csv(city, path):
     return path
 
 
-def web_json_v5(city, cfg, path, pdat=None, clip=None):
+def web_json_v5(city, cfg, path, pdat=None, clip=None, *, walk_minutes=DEFAULT_WALK_MINUTES,
+                walk_max_minutes=None, prefer_walk=False):
     """Файл для страницы (этап 7): формат страницы страница/конструктор.html —
     кварталы с контурами в метрах и показателями, точки метро и остановок, параметры (КИТ: kit, kit_source, kit_sp_row),
     варианты и исходная геометрия для экспорта GeoJSON. Если есть точный расчёт blocksnet «как есть» (pdat),
@@ -183,6 +192,16 @@ def web_json_v5(city, cfg, path, pdat=None, clip=None):
            'sp42': {k: [n, v] for k, (n, v) in SP42_B1.items()},
            'blocks': blocks,
            'pts': {'metro': np.round(city['pts']['метро'], 2).tolist(), 'stop': np.round(city['pts']['остановка'], 2).tolist()}}
+    if walk_max_minutes is None:
+        walk_max_minutes = max(DEFAULT_PREPARED_MINUTES, walk_minutes)
+    walk, reason = load_walk_access(cfg, t['block_id'], walk_minutes, walk_max_minutes, keep)
+    web['access_method'] = 'walk' if walk is not None and prefer_walk else 'geometry'
+    if walk is not None:
+        web['walk_access'] = walk
+    else:
+        web['walk_access_note'] = 'Нет подходящей пешеходной матрицы. Используется геометрическое расстояние.'
+        if prefer_walk:
+            web['walk_access_note'] += ' ' + reason
     if pdat:
         prov = {k: pdat[k] for k in ('blocksnet', 'граф', 'max_depth') if k in pdat}
         for key in ('school', 'kindergarten'):

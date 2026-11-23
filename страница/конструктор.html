@@ -87,6 +87,7 @@ details summary{cursor:pointer;color:var(--mut);font-size:12.5px}
   </div>
   <div class="row" style="margin-top:8px">
     <label>Окраска карты по варианту <select id="showSel"></select></label>
+    <label>Изменение доступа <select id="mapFunction"><option value="">К и ОД вместе</option><option>К</option><option>ОД</option></select></label>
   </div>
 </section>
 
@@ -114,6 +115,11 @@ details summary{cursor:pointer;color:var(--mut);font-size:12.5px}
       <label>Сады <input id="nk" type="number" step="5" min="1"></label>
     </span>
     <button class="pri" id="run">Пересчитать</button>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <label>Доступ к К и ОД <select id="accessMode"><option value="geometry">По геометрическому расстоянию</option><option id="walkOption" value="walk" disabled>По пешеходной сети</option></select></label>
+    <label id="walkThreshold" hidden>Порог ходьбы, мин <input id="walkMinutes" type="number" min="0" step="any" value="10"></label>
+    <span id="walkNote" class="sub"></span>
   </div>
   <div class="sub" id="normsNote" style="margin-top:4px"></div>
   <div class="sub" id="scenarioNote" style="margin-top:4px"></div>
@@ -223,6 +229,23 @@ function chooseKit(D,B,E,mode,value,spRow){
 function kitLine(kit,kitE){if(!kitE)return `${fmt(kit,2)} / — (окружения нет)`;const r=kit/kitE;
   return `${fmt(kit,2)} / ${fmt(kitE,2)} (${r>=1?`в ${fmt(r,1)} раз плотнее`:`в ${fmt(1/r,1)} раз реже`})`;}
 
+function hasWalkAccess(walk,B){
+  return walk?.method==='walk'&&walk.units==='minutes'&&walk.graph==='walk'&&
+    Number.isFinite(walk.max_minutes)&&walk.max_minutes>0&&
+    walk.rows?.length===B.length&&walk.block_ids?.length===B.length&&
+    B.every((b,i)=>walk.block_ids[i]===b.id);
+}
+function validWalkMinutes(minutes,walk){return Number.isFinite(minutes)&&minutes>0&&minutes<=walk?.max_minutes;}
+function walkNeighbors(D,B,origins,minutes){
+  const walk=D.walk_access;
+  if(!hasWalkAccess(walk,B)||!validWalkMinutes(minutes,walk))throw new Error('Пешеходные связи не подходят к кварталам или порогу.');
+  return new Map(Array.from(origins,i=>{
+    const row=walk.rows[i],destinations=[];
+    for(let k=0;k<row.length;k+=2)if(row[k+1]<=minutes)destinations.push(row[k]);
+    return [i,destinations];
+  }));
+}
+
 // Шаги 5–6 (compare_v5). T — номера строк кварталов территории; P — параметры; SCN — варианты; K — выбор КИТ.
 function calc(D,B,T,P,SCN,K){
   const n=B.length,inT=new Array(n).fill(false);for(const k of T)inT[k]=true;
@@ -234,21 +257,31 @@ function calc(D,B,T,P,SCN,K){
   const popA=D.totals.pop,jobsA=D.totals.jobs,popT0=sum(T,'pop'),jobsT0=sum(T,'j'),jobsT0A=sum(T,'jA');
   const near=new Map();
   for(const b of E){if(B[b].pop<=0)continue;const x=B[b].cx,y=B[b].cy,l=[];for(let k=0;k<n;k++){if(bbD(x,y,B[k])>P.r)continue;if(distPB(x,y,B[k])<=P.r)l.push(k);}near.set(b,l);}
+  const useWalk=(P.access_method??D.access_method)==='walk'&&hasWalkAccess(D.walk_access,B);
+  const walkMinutes=P.walk_minutes??D.walk_access?.threshold_minutes;
+  const walk=useWalk?walkNeighbors(D,B,near.keys(),walkMinutes):null;
+  const accessLabel=walk?`${D.walk_access.source}, пешком ≤ ${walkMinutes} мин`:`геометрическое расстояние, r = ${P.r} м`;
   const capSum=(idx,f)=>idx.reduce((s,i)=>s+B[i][f],0);
-  const out={},eff={};
+  const out={},eff={},effByFunction={};
   const area=T.map(k=>B[k].a),aT=area.reduce((s,v)=>s+v,0);
   for(const [name,sh] of [['Как есть',null],...Object.entries(SCN)]){
     let N,J,JA,d=null,capS,capK;
     if(!sh){N=popT0;J=jobsT0;JA=jobsT0A;capS=capSum([...E,...T],'sc');capK=capSum([...E,...T],'kg');}
     else{const s=sh['Ж']+sh['К']+sh['ОД']+sh['П'];d={'Ж':sh['Ж']/s,'К':sh['К']/s,'ОД':sh['ОД']/s,'П':sh['П']/s};
       N=F*d['Ж']*P.k_liv/P.q;J=F*(d['К']/P['a_К']+d['ОД']/P['a_ОД']+d['П']/P['a_П']);JA=J;capS=capSum(E,'sc');capK=capSum(E,'kg');}
-    const acc={},e={};
+    const acc={},e={},changes={'К':{},'ОД':{}};
     if(d){for(const [g,f] of [['К','K'],['ОД','OD'],['П','P']]){let a=0,c=0;
-      for(const [b,l] of near){const before=l.some(k=>B[k][f]);const after=l.some(k=>B[k][f]&&!inT[k])||(d[g]>0&&distT[b]<=P.r);const p=B[b].pop;
+      for(const [b,l] of near){
+        const byWalk=walk&&g!=='П',destinations=byWalk?walk.get(b):l;
+        const before=destinations.some(k=>B[k][f]);
+        const after=destinations.some(k=>B[k][f]&&!inT[k])||(d[g]>0&&(byWalk?destinations.some(k=>inT[k]):distT[b]<=P.r));
+        const p=B[b].pop;
         if(g==='П'){if(before)a+=p;if(after)c+=p;continue;}
-        if(!before&&after){a+=p;e[b]=(e[b]||0)+1;} if(before&&!after){c+=p;e[b]=(e[b]||0)-1;}}
+        if(!before&&after){a+=p;e[b]=(e[b]||0)+1;changes[g][b]=1;}
+        if(before&&!after){c+=p;e[b]=(e[b]||0)-1;changes[g][b]=-1;}}
       acc[g]=[a,c];}}
     eff[name]=e;
+    effByFunction[name]=changes;
     const nS=(popE+N)*P.n_school/1000,nK=(popE+N)*P.n_kinder/1000;
     const freeS=Math.max(0,capS-popE*P.n_school/1000),freeK=Math.max(0,capK-popE*P.n_kinder/1000);
     const o={N,J,J_A:JA,d,dJ:d?J-jobsT0:null,acc,K:(jobsE+J)/(popE+N),KA:(jobsEA+JA)/(popE+N),Kall:(jobsA-jobsT0+J)/(popA-popT0+N),
@@ -274,7 +307,7 @@ function calc(D,B,T,P,SCN,K){
   const CS=D.params.city_share;   // порог сравнения с городом, % — из файла (compare.CITY_SHARE пакета, ТЗ 18.2а)
   if(maxJ>CS||maxN>CS/100*popA)warns.push(`Масштаб: вариант добавляет до ${fmt(maxJ)} % рабочих мест всего набора и до ${fmt(maxN)} жителей (во всём наборе ${fmt(popA)}). Варианты различаются объёмом застройки сильнее, чем сочетанием функций. Проверьте КИТ или уменьшите территорию.`);
   const city=names.slice(1).some(x=>out[x].Jcity>CS||(popA&&100*out[x].N/popA>CS));   // как city_scale в пакете (ТЗ 18.2а)
-  return {out,E,eff,kit,kitSrc:kk.src,kitE:kk.kitE,F,S,popE,jobsE,warns,city};
+  return {out,E,eff,effByFunction,accessLabel,kit,kitSrc:kk.src,kitE:kk.kitE,F,S,popE,jobsE,warns,city};
 }
 const GROUP_WORDS={'К':'торговле и услугам','ОД':'общественно-деловой функции'};
 function cmpWord(d){return Math.abs(d)<0.03?'почти без изменений':(d>0?'больше':'меньше');}
@@ -298,7 +331,7 @@ const cache={};let D=null,B=[],sel=new Set(),last=null,SCN0=null,SCN=null,reques
 const $=id=>document.getElementById(id);
 const html=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const functionGroups=['Ж','К','ОД','П'];
-function params(){return {R:+$('R').value,r:+$('r').value,q:D.params.q,k_liv:D.params.k_liv,'a_К':D.params['a_К'],'a_ОД':D.params['a_ОД'],'a_П':D.params['a_П'],n_school:+$('ns').value||D.params.n_school,n_kinder:+$('nk').value||D.params.n_kinder};}
+function params(){return {R:+$('R').value,r:+$('r').value,q:D.params.q,k_liv:D.params.k_liv,'a_К':D.params['a_К'],'a_ОД':D.params['a_ОД'],'a_П':D.params['a_П'],n_school:+$('ns').value||D.params.n_school,n_kinder:+$('nk').value||D.params.n_kinder,access_method:$('accessMode').value,walk_minutes:$('accessMode').value==='walk'?+$('walkMinutes').value:null};}
 function exportButtons(){
   for(const id of ['csvShort','csvFull','png'])$(id).disabled=!last;
   $('geojson').disabled=!last||!D.blocks_crs;
@@ -314,6 +347,7 @@ function compute(){
   if(!D)return;
   const T=B.map((b,i)=>sel.has(b.id)?i:-1).filter(i=>i>=0);
   const P=params(),mode=$('kitMode').value;
+  $('walkThreshold').hidden=P.access_method!=='walk';
   $('spRow').style.display=mode==='sp'?'':'none';$('kit').disabled=mode!=='own';
   $('tsel').textContent=[...sel].join(', ')||'—';$('blockIds').value=[...sel].join(', ');
   $('selectionError').textContent='';
@@ -321,6 +355,9 @@ function compute(){
   const positive=value=>Number.isFinite(value)&&value>0;
   if(!positive(P.R)||!positive(P.r)||(mode==='own'&&!positive(+$('kit').value))){
     resetResults('Укажите положительные значения радиусов и собственного КИТ.');return;
+  }
+  if(P.access_method==='walk'&&!validWalkMinutes(P.walk_minutes,D.walk_access)){
+    resetResults(`Укажите положительный порог ходьбы до ${D.walk_access.max_minutes} мин включительно.`);return;
   }
   if(Object.values(SCN).some(sh=>!positive(functionGroups.reduce((sum,g)=>sum+sh[g],0)))){
     resetResults('Задайте положительную сумму долей в каждом сценарии.');return;
@@ -341,6 +378,7 @@ function render(){
   const acc=(o,n,g)=>now(n)?'—':`+${fmt(o.acc[g][0])} / −${fmt(o.acc[g][1])}`;
   const first=out[names[1]];
   const R=[head,
+    mk('Способ расчёта доступа к К и ОД',()=>last.accessLabel),
     mk('Жители на территории',o=>o.N),
     mk('Рабочие места на территории (изменение к нынешним)',(o,n)=>now(n)?fmt(o.J):`${fmt(o.J)} (${o.dJ>0?'+':''}${fmt(o.dJ)})`),
     mk('Рабочих мест на жителя в окружении',o=>o.K,2),
@@ -354,7 +392,8 @@ function render(){
   const Q=[head];
   Q.push(sec('Работа и жильё'),mk('Жители на территории N',o=>o.N),mk('Рабочие места на территории J',o=>o.J),mk('Изменение рабочих мест к нынешним',(o,n)=>now(n)?'—':o.dJ,0,true),
     mk('Доля нежилых площадей, %',o=>o.d?100*(1-o.d['Ж']):''),mk('J, % рабочих мест всего набора',o=>o.Jcity,1),mk('N, % жителей всего набора',o=>o.Ncity,1),mk('K окружения',o=>o.K,2),mk('K окружения, нижняя граница',o=>o.KA,2),mk('K по всем данным',o=>o.Kall,3));
-  Q.push(sec('Доступ к функциям (r)'),mk('Доступ к К: получают / теряют',(o,n)=>acc(o,n,'К')),mk('Доступ к ОД: получают / теряют',(o,n)=>acc(o,n,'ОД')),
+  Q.push(sec('Доступ к функциям'),mk('Способ расчёта доступа к К и ОД',()=>last.accessLabel),
+    mk('Доступ к К: получают / теряют',(o,n)=>acc(o,n,'К')),mk('Доступ к ОД: получают / теряют',(o,n)=>acc(o,n,'ОД')),
     mk('Жители в радиусе r от производства: до / после',(o,n)=>now(n)?'—':`${fmt(o.acc['П'][0])} / ${fmt(o.acc['П'][1])}`));
   if(D.provision){
     for(const [key,lab] of [['school','Школы'],['kindergarten','Сады']]){
@@ -399,6 +438,8 @@ function experiment(){
   const parameters={...last.params};
   if(D.provision){parameters.n_school=D.provision.school.norm;parameters.n_kinder=D.provision.kindergarten.norm;}
   return {город:D.name, кварталы:last.territory, набор:$('scenarioMode').value,
+    доступ_К_ОД:last.accessLabel,
+    источник_графа:last.params.access_method==='walk'?(D.walk_access.graph_source||D.walk_access.source):undefined,
     КИТ:last.kit, источник_КИТ:last.kitSrc, параметры:parameters, сценарии:SCN,
     происхождение_сценариев:$('scenarioMode').value==='paired'?D.scenario_origins:undefined,
     школы_и_сады:D.provision?'оценка по BlocksNet «как есть»':'запасной расчёт 4.7.3',
@@ -416,6 +457,7 @@ function saveCsv(id,suffix){
   rows.push([],['Параметры эксперимента'],['Город',ex.город],['Кварталы',ex.кварталы.join(', ')],
     ['Набор сценариев',ex.набор==='paired'?'Эмпирические и экспериментальные':'Стандартный'],
     ['КИТ',ex.КИТ],['Источник КИТ',ex.источник_КИТ],['Школы и сады',ex.школы_и_сады],
+    ...(ex.источник_графа?[['Источник графа',ex.источник_графа]]:[]),
     ['Ограничение набора, м',ex.ограничение_набора_м],
     ...Object.entries(ex.параметры),...functionGroups.map(g=>[`Доля ${g}, %`,'',...names.map(n=>SCN[n][g])]));
   const cell=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
@@ -429,7 +471,9 @@ function saveGeojson(){
     block_id:b.id,zone:b.zc,area:b.a,pop:b.pop,jobs:b.j,
     есть_К:!!b.K,есть_ОД:!!b.OD,есть_П:!!b.P,cap_school:b.sc,cap_kinder:b.kg,
     территория:sel.has(b.id),окружение:surrounding.has(i),
-    ...Object.fromEntries(Object.keys(SCN).map(name=>[`доступ ${name}`,last.eff[name][i]||0]))}}));
+    ...Object.fromEntries(Object.keys(SCN).flatMap(name=>[
+      [`доступ ${name}`,last.eff[name][i]||0],
+      ...['К','ОД'].map(g=>[`изменение доступа ${g} ${name}`,last.effByFunction[name][g][i]||0])]))}}));
   const geo={type:'FeatureCollection',crs:{type:'name',properties:{name:D.blocks_crs}},
     эксперимент:experiment(),features};
   save(new Blob([JSON.stringify(geo)],{type:'application/geo+json'}),'кварталы.geojson');
@@ -437,7 +481,9 @@ function saveGeojson(){
 function savePng(){
   if(!last)return;
   const shown=$('showSel').value,code=D.code;
-  cv.toBlob(blob=>{if(blob&&D?.code===code)save(blob,`карта_${shown.replace(/[<>:"/\\|?*]/g,'_')}.png`);},'image/png');
+  const mode=last.params.access_method==='walk'?`пешком_${last.params.walk_minutes}_мин`:'геометрия';
+  const suffix=[$('mapFunction').value,mode].filter(Boolean).join('_');
+  cv.toBlob(blob=>{if(blob&&D?.code===code)save(blob,`карта_${shown.replace(/[<>:"/\\|?*]/g,'_')}_${suffix}.png`);},'image/png');
 }
 
 // ---------- карта
@@ -450,7 +496,8 @@ function path(b){ctx.beginPath();for(const p of b.g)for(const r of p){r.forEach(
 function draw(){
   ctx.setTransform(dpr,0,0,dpr,0,0);const r=cv.getBoundingClientRect();
   ctx.fillStyle='#fbfaf8';ctx.fillRect(0,0,r.width,r.height);
-  const eff=last?last.eff[$('showSel').value]||{}:{};const Es=last?new Set(last.E):new Set();
+  const name=$('showSel').value,g=$('mapFunction').value;
+  const eff=(g?last?.effByFunction[name]?.[g]:last?.eff[name])||{};const Es=last?new Set(last.E):new Set();
   for(let i=0;i<B.length;i++){const b=B[i];path(b);
     let c=b.z==='П'?'#c9c3bb':b.z==='ОД'?'#c7d9ef':b.pop>0?'#f2d7b6':'#ece9e4';
     if(eff[i]>0)c='#2e8b57';else if(eff[i]<0)c='#d9822b';
@@ -485,6 +532,13 @@ function use(data){
     resetResults('Файл содержит зарезервированное название сценария.');return;
   }
   D=data;B=D.blocks;B.forEach(prep);
+  const walk=hasWalkAccess(D.walk_access,B)?D.walk_access:null;
+  $('walkOption').disabled=!walk;
+  $('accessMode').value=walk&&D.access_method==='walk'?'walk':'geometry';
+  $('walkMinutes').value=walk?.threshold_minutes??10;
+  $('walkMinutes').max=walk?.max_minutes??'';
+  $('walkNote').textContent=walk?`${walk.source}: пороги до ${walk.max_minutes} мин. r остаётся геометрическим радиусом для производства.`:
+    D.walk_access_note||'В файле нет подходящих пешеходных связей. Используется геометрическое расстояние.';
   $('datasetNote').textContent=D.name+(D.clip?` · фрагмент набора, радиус выгрузки ${fmt(D.clip)} м. Окружение считается по загруженным кварталам.`:'');
   const ids=new Set(B.map(b=>b.id));sel=new Set((D.territory||[]).filter(id=>ids.has(id)));
   $('pairedOption').disabled=!D.paired_scenarios;
@@ -516,6 +570,7 @@ async function load(code){
 function startLoad(){
   D=null;B=[];sel.clear();$('tsel').textContent='—';$('blockIds').value='';$('selectionError').textContent='';
   $('datasetNote').textContent='';$('scenarioNote').textContent='';$('normsNote').textContent='';$('provNote').textContent='';
+  $('walkOption').disabled=true;$('walkThreshold').hidden=true;$('walkNote').textContent='';
   $('shares').innerHTML='';$('showSel').innerHTML='';$('pairedOption').disabled=true;
   resetResults('Загрузка данных…');return ++requestId;
 }
@@ -539,8 +594,9 @@ $('clear').onclick=()=>{sel.clear();compute();};
 $('selectIds').onclick=selectById;
 $('blockIds').onkeydown=e=>{if(e.key==='Enter')selectById();};
 $('scenarioMode').onchange=()=>{if(D){setScenarios();compute();}};
-$('run').onclick=compute;['kit','R','r','ns','nk','kitMode','spRow'].forEach(k=>$(k).onchange=compute);
+$('run').onclick=compute;['kit','R','r','ns','nk','kitMode','spRow','accessMode','walkMinutes'].forEach(k=>$(k).onchange=compute);
 $('showSel').onchange=draw;
+$('mapFunction').onchange=draw;
 $('csvShort').onclick=()=>saveCsv('res','сравнение_вариантов.csv');
 $('csvFull').onclick=()=>saveCsv('resFull','сравнение_подробно.csv');
 $('geojson').onclick=saveGeojson;

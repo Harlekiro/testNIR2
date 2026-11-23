@@ -106,6 +106,15 @@ def same_strings(ref, got):
 ETALON_V5 = os.path.join(ROOT, 'tests', 'etalon', 'v5')                       # эталоны правил раздела 4 (запасной 4.7.3)
 ETALON_BLOCKSNET = os.path.join(ROOT, 'tests', 'etalon', 'v5_blocksnet')      # то же с точным расчётом blocksnet
 
+# Входные сценарии исторических эталонов Петербурга и точного BlocksNet.
+HISTORICAL_SCENARIOS = {
+    'Ж+К': {'Ж': 85, 'К': 15, 'ОД': 0, 'П': 0},
+    'Ж+К+ОД': {'Ж': 75, 'К': 5, 'ОД': 20, 'П': 0},
+    'К+ОД': {'Ж': 0, 'К': 15, 'ОД': 85, 'П': 0},
+    'ОД+П': {'Ж': 0, 'К': 10, 'ОД': 40, 'П': 50},
+    'Ж+П': {'Ж': 50, 'К': 10, 'ОД': 0, 'П': 40},
+}
+
 
 @pytest.fixture
 def small_cfg(tmp_path):
