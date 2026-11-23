@@ -1,0 +1,422 @@
+{
+  "город": "Санкт-Петербург",
+  "территория": [
+    8346,
+    9366,
+    2059
+  ],
+  "конфигурация": {
+    "файл": "configs/spb_full.yaml",
+    "sha256": "eca8149da799e04ddb09633ec86744acf311ebca6d3808b8b6054fe18dc34342"
+  },
+  "КИТ": 1.4,
+  "источник КИТ": "пользователь: ПЗЗ Санкт-Петербурга, зоны ТСМ и ТД1-1",
+  "площадь, га": 24.7,
+  "кварталов набора": 9368,
+  "кварталов окружения": 74,
+  "параметры": {
+    "kit": 1.4,
+    "kit_source": "ПЗЗ Санкт-Петербурга, зоны ТСМ и ТД1-1",
+    "kit_sp_row": null,
+    "pzz_build_share": null,
+    "pzz_max_storeys": null,
+    "R": 800,
+    "r": 500,
+    "q": 30,
+    "k_liv": 0.7,
+    "a_К": 28,
+    "a_ОД": 15,
+    "a_П": 69,
+    "n_school": 120,
+    "n_kinder": 61,
+    "S_min": 200,
+    "storeys_default": 1,
+    "builtin": true,
+    "builtin_s0": 100,
+    "builtin_share": 0.5,
+    "builtin_min_storeys": 2,
+    "round_threshold": 0.88,
+    "round_min_vertices": 10,
+    "prod_min_storeys": 2,
+    "prod_min_footprint_one_storey": 1000,
+    "a_prod_zone": 69,
+    "a_prod_one_storey": 81,
+    "a_business_zone": 50,
+    "social_norms": {
+      "school": 13.5,
+      "kindergarten": 35,
+      "hospital": 20,
+      "roddom": 20,
+      "polyclinic": 32,
+      "dentist": 32,
+      "trauma": 32,
+      "women_clinic": 32,
+      "emergency": 32
+    },
+    "stat_jobs": 1472900,
+    "housing_note": null,
+    "data_note": null
+  },
+  "сценарии": {
+    "Ж+К+ОД [эмп.]": {
+      "Ж": 50,
+      "К": 15,
+      "ОД": 35,
+      "П": 0
+    },
+    "К+ОД [эмп.]": {
+      "Ж": 0,
+      "К": 35,
+      "ОД": 65,
+      "П": 0
+    },
+    "Ж+К [эксп.]": {
+      "Ж": 85,
+      "К": 15,
+      "ОД": 0,
+      "П": 0
+    },
+    "Ж+К+ОД [эксп.]": {
+      "Ж": 75,
+      "К": 5,
+      "ОД": 20,
+      "П": 0
+    },
+    "К+ОД [эксп.]": {
+      "Ж": 0,
+      "К": 15,
+      "ОД": 85,
+      "П": 0
+    },
+    "К+ОД+П [эксп.]": {
+      "Ж": 0,
+      "К": 10,
+      "ОД": 40,
+      "П": 50
+    },
+    "Ж+К+П [эксп.]": {
+      "Ж": 50,
+      "К": 10,
+      "ОД": 0,
+      "П": 40
+    }
+  },
+  "доступ": [
+    "геометрическое расстояние, r = 500 м",
+    "OpenStreetMap, пешком ≤ 10 мин"
+  ],
+  "ограничение доступности": null,
+  "школы и сады": "Точный BlocksNet 1.0.0.dev1, весь набор, раздел 12",
+  "подробности режима": "blocksnet: competitive_provision, пешеходная матрица, нормы blocksnet (раздел 12)",
+  "пешеходная матрица": [
+    {
+      "файл": "data/spb_full/access/matrix_walk.npz",
+      "sha256": "60660366f2a9521e31fcbe48b30cfc9349dfa4fc09a6b532d9430f899772ccdb"
+    },
+    {
+      "файл": "data/spb_full/access/matrix_walk.json",
+      "sha256": "a51d091b192b43fc6fe0822f7bb7d485a36aa1a88edcc165a19d3bca4680e47e"
+    }
+  ],
+  "исходные слои": [
+    {
+      "файл": "data/spb_full/blocks.geojson",
+      "sha256": "723e1cfa89ce84133a4779c90160cc5a685472bb6bc22f75c655f7c79530d081"
+    },
+    {
+      "файл": "data/spb_full/buildings.geojson",
+      "sha256": "0a623a482a85702d2c8d03f67fe6320696a5d2dae6a92566109b2eaeca5e92cb"
+    },
+    {
+      "файл": "data/spb_full/functional_zones.geojson",
+      "sha256": "c8a5cc4696dacc58bc091017fe1f047cd0333ac161bbda4ff0c548acf9ff8fc6"
+    },
+    {
+      "файл": "data/spb_full/services/animal_shelter.geojson",
+      "sha256": "a4ac16dc4cca41e64b64a36d510510e68b46b28f9cccf6d51dae093002c86bdb"
+    },
+    {
+      "файл": "data/spb_full/services/bakery.geojson",
+      "sha256": "17c70aebfcdefc229c1f5cf380ecb39263348137afd1c261ed4c164db63dbf19"
+    },
+    {
+      "файл": "data/spb_full/services/bank.geojson",
+      "sha256": "52d8364f7a6945280ef22347d59a8f74d49add3ef086c218420eb3d0eca92688"
+    },
+    {
+      "файл": "data/spb_full/services/bar.geojson",
+      "sha256": "a834089ccd7604a95438f7e3b3f522fdab9fa017e989a859c2b16ab5ebf1af1b"
+    },
+    {
+      "файл": "data/spb_full/services/beach.geojson",
+      "sha256": "598951f059a1a580ffcecd8f29a44f01f7511268b6f4c878fe67e6c8d023f532"
+    },
+    {
+      "файл": "data/spb_full/services/brewery.geojson",
+      "sha256": "3d3add848070332cd27565276977cb488564828dc61bbc60cf524be2c4e97f5f"
+    },
+    {
+      "файл": "data/spb_full/services/bus_station.geojson",
+      "sha256": "6af2cd3f2f5a63dbe1d26e4f0f76a8105dd3701396376db3bc8242d2cf6e83d2"
+    },
+    {
+      "файл": "data/spb_full/services/bus_stop.geojson",
+      "sha256": "df6c714486895f7ae7fdf2762936d10643a851250e29f4abe1fe6c7854f01383"
+    },
+    {
+      "файл": "data/spb_full/services/cafe.geojson",
+      "sha256": "89ba5a3e4b6c4e31ef85db50ebc734e1127d8e224a514b95842453e5958df538"
+    },
+    {
+      "файл": "data/spb_full/services/cemetery.geojson",
+      "sha256": "90a0ca3841da0783819db8f4a0b749fbe4980f63422b0515425601d14b1e10c8"
+    },
+    {
+      "файл": "data/spb_full/services/cinema.geojson",
+      "sha256": "3c4a4e7f545e20c4c9c1ede3e14a2805baf17a82fedf2ef1014119912568bd3e"
+    },
+    {
+      "файл": "data/spb_full/services/circus.geojson",
+      "sha256": "5133e7038bff354ea362d470a9faf261cbbbc4abfcc9f6195bc1f8e57bb26030"
+    },
+    {
+      "файл": "data/spb_full/services/convenience.geojson",
+      "sha256": "3d422775fd2adfabf871d03d5a0b6c9de7c8941da67082ae6ad01c0558396331"
+    },
+    {
+      "файл": "data/spb_full/services/dog_park.geojson",
+      "sha256": "4a584f4f432c4560521c72f1a29a516d401fadf93aa97475a506daac5f7bbc6b"
+    },
+    {
+      "файл": "data/spb_full/services/fuel.geojson",
+      "sha256": "6e329705d6238415c3ea333902ca3e87bc16dd40dbdbc4657c0b200bd19f0a38"
+    },
+    {
+      "файл": "data/spb_full/services/government.geojson",
+      "sha256": "335027f5b0f57528a6af597b4c67baaa18b728d24289ea69cfc209b5625e0f5f"
+    },
+    {
+      "файл": "data/spb_full/services/greenhouse_complex.geojson",
+      "sha256": "31b97231bce39eddf372b6f77ca7bfc048dc5f0d58dc0e6ddad5a8c7b147f65a"
+    },
+    {
+      "файл": "data/spb_full/services/guest_house.geojson",
+      "sha256": "82a3df4d4738c711914ca9424c22809961e62f8bd13a8f1429aca38372b1e97f"
+    },
+    {
+      "файл": "data/spb_full/services/hairdresser.geojson",
+      "sha256": "3de7b71dbd93928484f67af2bd62d9693ad0d3c1c9f91dfb991209c2ab0ed2db"
+    },
+    {
+      "файл": "data/spb_full/services/hospital.geojson",
+      "sha256": "6426fa36bdec6950b5f0120b188c3f3d822bb771bde7d37e5a7f66cddcbf8a7a"
+    },
+    {
+      "файл": "data/spb_full/services/hostel.geojson",
+      "sha256": "9448181a071de18e3c5409ef40119bb8c4b350ce0223411d0d185ea0c45975b4"
+    },
+    {
+      "файл": "data/spb_full/services/hotel.geojson",
+      "sha256": "071fd5eb71b895c8fa0e8cc62ff8ce6766143bfcae8e67d01505d1613b23d4be"
+    },
+    {
+      "файл": "data/spb_full/services/kindergarten.geojson",
+      "sha256": "311cecb0cfe48aae0dcc639f86a01d737bfec6b249b0b7d0873142b2a9a7aa19"
+    },
+    {
+      "файл": "data/spb_full/services/landfill.geojson",
+      "sha256": "138b0e78ff3365e8594b052f39d17c9ab15c4a0dcd4cff742a4c1064b100fefa"
+    },
+    {
+      "файл": "data/spb_full/services/lawyer.geojson",
+      "sha256": "2bfa657e52066c40ce32bb514951cd69cb19b9a8ad01bf12b9b50a719f2d0618"
+    },
+    {
+      "файл": "data/spb_full/services/machine_building_plant.geojson",
+      "sha256": "979b5e4bb204de070697f1d47d24c78f74441e2608385edb6ee3372c1f2981ef"
+    },
+    {
+      "файл": "data/spb_full/services/mall.geojson",
+      "sha256": "f8dffbe24f5b4c158caa2f68deb5bae5e358148f3ab5135e50cd1ec2ef52909b"
+    },
+    {
+      "файл": "data/spb_full/services/market.geojson",
+      "sha256": "718fe56097030122ac8e09326a8b868a07fec1bcabbdea96c45ad7fb1e2b5e2d"
+    },
+    {
+      "файл": "data/spb_full/services/multifunctional_center.geojson",
+      "sha256": "c83ad9db2596a1683f76b72827a84a367cb2795b3082a883741e402706fc1407"
+    },
+    {
+      "файл": "data/spb_full/services/museum.geojson",
+      "sha256": "2fb2fc8494803c58419407d73a9a2026ff302c77bf51e6ed5a54b0326e925130"
+    },
+    {
+      "файл": "data/spb_full/services/park.geojson",
+      "sha256": "e16d6f7ce52844ed476dd1728a56f28bf3c734ba555f8d0c33d7aebda5ec354a"
+    },
+    {
+      "файл": "data/spb_full/services/parking.geojson",
+      "sha256": "7e67d5c03d9ac5e66737601840c53b96f0245e1a2c5a636f18041aa641787f26"
+    },
+    {
+      "файл": "data/spb_full/services/pharmacy.geojson",
+      "sha256": "116638f472ddd36673316ed89551887fd995dcfd5a8a27450cf990f7898e51e4"
+    },
+    {
+      "файл": "data/spb_full/services/pier.geojson",
+      "sha256": "7ff89d05f4206e32f937fcc17afb66ce721feb614876e6dc7496280e7b8a67f3"
+    },
+    {
+      "файл": "data/spb_full/services/pitch.geojson",
+      "sha256": "5fc38ea18a4738ad96972246588e7dcadcb955fc2e402e3c778c8fb7b4f47851"
+    },
+    {
+      "файл": "data/spb_full/services/plant_nursery.geojson",
+      "sha256": "4d14b381acb11c9dbdfe3e2a3817d4f3d891d9a3055fb3aee033731e016d112d"
+    },
+    {
+      "файл": "data/spb_full/services/playground.geojson",
+      "sha256": "f39ad895ebda8f96802eeb138f629db49010eaa7598b24b018bcbd1c3d83292b"
+    },
+    {
+      "файл": "data/spb_full/services/police.geojson",
+      "sha256": "79482c2c05c2716e656306f7c7101711509c943e0073d1caf23e60b365a48327"
+    },
+    {
+      "файл": "data/spb_full/services/polyclinic.geojson",
+      "sha256": "229770613a8635e2e805214648a2e889353c3a412d89ebb47c92a99f950d29b9"
+    },
+    {
+      "файл": "data/spb_full/services/post.geojson",
+      "sha256": "67e35626ba02ea20705bd6ff1d21a5cbd8c89163bafec64eb18c5e5aabd8c6d6"
+    },
+    {
+      "файл": "data/spb_full/services/prison.geojson",
+      "sha256": "5a3b18da037b19bdce8a125d10b223433464cc37ef6247443ed28ee31e2b2176"
+    },
+    {
+      "файл": "data/spb_full/services/recruitment.geojson",
+      "sha256": "918ea72118f5026cf787703b25ec27ec794eae80e96729914b58198cb43694b4"
+    },
+    {
+      "файл": "data/spb_full/services/religion.geojson",
+      "sha256": "05e9edbaa447568f5e550eefd6391cfd1ea982764dd239ae0f941ae129ac444d"
+    },
+    {
+      "файл": "data/spb_full/services/reserve.geojson",
+      "sha256": "6b6ed95fe628a89364ccd8f993ff1be19a5f8e2685fc0f98753c332aa3ff0da4"
+    },
+    {
+      "файл": "data/spb_full/services/restaurant.geojson",
+      "sha256": "76b8b5c92406d36bf6f4dfae25822895c0f7598c91b81ae391da8a3c681de99b"
+    },
+    {
+      "файл": "data/spb_full/services/sanatorium.geojson",
+      "sha256": "18987e07b941e7f0a9e2974f7cdc10f21e19c86111caf8b22f30c0bfe48412b4"
+    },
+    {
+      "файл": "data/spb_full/services/school.geojson",
+      "sha256": "ae851561255291c4d3becc73a24bb082cb52dd928f2242f1a50052c67c4c45b0"
+    },
+    {
+      "файл": "data/spb_full/services/substation.geojson",
+      "sha256": "6ddbcd71229e76b445c5e5a4b151e6af79881ecebfda4e46aef23bddf9f37eb6"
+    },
+    {
+      "файл": "data/spb_full/services/subway_entrance.geojson",
+      "sha256": "341f4155013d8d3b964e893abc72a31d91ca072fe6be8566fc5950e9d1b3450a"
+    },
+    {
+      "файл": "data/spb_full/services/supermarket.geojson",
+      "sha256": "899d3fc6e1d30e39979cd78d8858c6266298dae212d392b5df514cbe8e28844a"
+    },
+    {
+      "файл": "data/spb_full/services/swimming_pool.geojson",
+      "sha256": "3cd745cb5fa0b666c407dfa54d987ef15795bdcdb97aed83ea1ff32a3f561f01"
+    },
+    {
+      "файл": "data/spb_full/services/theatre.geojson",
+      "sha256": "925e52586fb868cd1105ede4ae3d9bfe58b0424f4c4d27c712087b9a2b3ff0ff"
+    },
+    {
+      "файл": "data/spb_full/services/train_building.geojson",
+      "sha256": "26382fe912102da0c0773a281f6da0eeb121f20e626e1d9ab039e8577649a25b"
+    },
+    {
+      "файл": "data/spb_full/services/train_station.geojson",
+      "sha256": "c2f2539697d4fbd0a395a303f1dda80be0a5ea308e9a60d57e5a5d4cecda3fde"
+    },
+    {
+      "файл": "data/spb_full/services/university.geojson",
+      "sha256": "dc9e6331a078f0859b79c9ceae48df34714da48153924ae1f2112b52bc16e587"
+    },
+    {
+      "файл": "data/spb_full/services/warehouse.geojson",
+      "sha256": "c76c46d8104edee7f321a355935ddaee8174dedb5a1d8438b44cc12b211b586c"
+    },
+    {
+      "файл": "data/spb_full/services/wastewater_plant.geojson",
+      "sha256": "f46c2f69f253f4371a8c3708831f4eff0759fbf80381ec40dad202cb81eb75b1"
+    },
+    {
+      "файл": "data/spb_full/services/water_works.geojson",
+      "sha256": "15f849aa486401879236f244bdaf74570a420c1aa022dcd2153fff2e27a6cdb2"
+    },
+    {
+      "файл": "data/spb_full/services/woodworking_plant.geojson",
+      "sha256": "fb878c8f10b14a4684dce0bfa1f5c72a20f1fd142fa1c02fddf8da5743f64115"
+    },
+    {
+      "файл": "data/spb_full/services/zoo.geojson",
+      "sha256": "74dbea5c5ef9e38d060237d829d15e413250a05431f2188e212e203bf8ccc564"
+    }
+  ],
+  "сведения о данных": {
+    "кварталов": 9368,
+    "сервисов в кварталах": 57358,
+    "  из них К": 17413,
+    "  из них ОД": 3443,
+    "  из них П": 508,
+    "  из них школа": 880,
+    "  из них детский_сад": 1541,
+    "сервисов вне кварталов (не учтены)": 277,
+    "типы не из таблицы групп (не учтены)": [],
+    "школ без числа мест (принято 0 мест)": 148,
+    "детских садов без числа мест (принято 0 мест)": 273,
+    "зданий в кварталах": 164610,
+    "зданий без площади застройки (принято 0)": 0,
+    "зданий без этажности (принят 1 этаж)": 54018,
+    "  домов, где площадь ограничена долей первого этажа": 270,
+    "жилых домов со встроенными помещениями": 5311,
+    "  сервисов К и ОД в этих домах": 10908,
+    "  встроенная площадь К / ОД, м²": "907954 / 155121",
+    "жилых домов без жилой площади (оценка (A − B)·k_liv)": 7070,
+    "нежилых зданий с жителями в поле (обнулены)": 4,
+    "жилых домов без числа жителей (жители = жилая площадь ÷ q, 4.2.3)": 0,
+    "  прибавка жителей по 4.2.3": "0 (0.00 %)",
+    "нежилых зданий меньше S_min (не учтены)": 41157,
+    "шаги таблицы 4.4: зданий / поэтажная площадь, м² / рабочих мест": {
+      "1 (сервисы К, ОД, П)": "3324 / 23288124 / 616958",
+      "2 (социальные объекты)": "2182 / 5681936 / 149439",
+      "3 (сооружения в производственных зонах)": "34 / 15093 / 0",
+      "4 (производственная зона, от 2 этажей)": "2310 / 24880461 / 360586",
+      "5 (производственная зона, одноэтажные от порога площади)": "2320 / 7855267 / 96979",
+      "6 (производственная зона, одноэтажные меньше порога)": "5323 / 2572308 / 0",
+      "7 (общественно-деловая зона)": "8285 / 24196348 / 483927",
+      "8 (прочее)": "17656 / 33020108 / 0",
+      "встроенные помещения": "5311 / 1063075 / 30529"
+    },
+    "школ без числа мест (0 рабочих мест, шаг 2)": 88,
+    "зданий со школой и другими социальными объектами (считается школа)": 9,
+    "зданий с несколькими социальными типами без школы (норма по 4.4.3)": 3,
+    "типов без нормы (принята норма группы a_g, 4.4.3)": 12,
+    "кварталов с П: по сервисам / по зданиям шагов 4–5 / всего": "390 / 378 / 624",
+    "жителей": 5382121,
+    "рабочих мест: основная оценка (А + Б)": 1738418,
+    "рабочих мест: нижняя граница (только А)": 796926,
+    "K_ref — рабочих мест на жителя в среднем": 0.323,
+    "мест в школах / детских садах": "451935 / 318720"
+  },
+  "предупреждения": []
+}

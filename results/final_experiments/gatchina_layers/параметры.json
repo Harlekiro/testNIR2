@@ -1,0 +1,412 @@
+{
+  "город": "Гатчина",
+  "территория": [
+    322,
+    323,
+    377
+  ],
+  "конфигурация": {
+    "файл": "configs/gatchina_layers.yaml",
+    "sha256": "b2d7ec08c777a06ac909df232d33b859af370db33ad87db28c4b9effcb3daeb9"
+  },
+  "КИТ": 1.2,
+  "источник КИТ": "свод правил: СП 42.13330.2016, табл. Б.1, строка «многоквартирные многоэтажные жилые дома» (zh_multi)",
+  "площадь, га": 66.0,
+  "кварталов набора": 517,
+  "кварталов окружения": 78,
+  "параметры": {
+    "kit": null,
+    "kit_source": null,
+    "kit_sp_row": "zh_multi",
+    "pzz_build_share": null,
+    "pzz_max_storeys": null,
+    "R": 800,
+    "r": 500,
+    "q": 30,
+    "k_liv": 0.7,
+    "a_К": 28,
+    "a_ОД": 15,
+    "a_П": 69,
+    "n_school": 120,
+    "n_kinder": 61,
+    "S_min": 200,
+    "storeys_default": 1,
+    "builtin": true,
+    "builtin_s0": 100,
+    "builtin_share": 0.5,
+    "builtin_min_storeys": 2,
+    "round_threshold": 0.88,
+    "round_min_vertices": 10,
+    "prod_min_storeys": 2,
+    "prod_min_footprint_one_storey": 1000,
+    "a_prod_zone": 69,
+    "a_prod_one_storey": 81,
+    "a_business_zone": 50,
+    "social_norms": {
+      "school": 13.5,
+      "kindergarten": 35,
+      "hospital": 20,
+      "roddom": 20,
+      "polyclinic": 32,
+      "dentist": 32,
+      "trauma": 32,
+      "women_clinic": 32,
+      "emergency": 32
+    },
+    "stat_jobs": null,
+    "housing_note": "жильё допустимо только вне санитарно-защитных зон действующих предприятий",
+    "data_note": "территория в зоне П-1 (производства III–V класса опасности), в квартале 322 действуют предприятия (ЦНИИ КМ «Прометей», «Гатчинский хлеб»); варианты с жильём реализуемы только при выводе предприятий или сокращении их санитарно-защитных зон (ТЗ 17)"
+  },
+  "сценарии": {
+    "Ж+К+ОД [эмп.]": {
+      "Ж": 50,
+      "К": 15,
+      "ОД": 35,
+      "П": 0
+    },
+    "К+ОД [эмп.]": {
+      "Ж": 0,
+      "К": 35,
+      "ОД": 65,
+      "П": 0
+    },
+    "Ж+К [эксп.]": {
+      "Ж": 85,
+      "К": 15,
+      "ОД": 0,
+      "П": 0
+    },
+    "Ж+К+ОД [эксп.]": {
+      "Ж": 75,
+      "К": 5,
+      "ОД": 20,
+      "П": 0
+    },
+    "К+ОД [эксп.]": {
+      "Ж": 0,
+      "К": 15,
+      "ОД": 85,
+      "П": 0
+    },
+    "К+ОД+П [эксп.]": {
+      "Ж": 0,
+      "К": 10,
+      "ОД": 40,
+      "П": 50
+    },
+    "Ж+К+П [эксп.]": {
+      "Ж": 50,
+      "К": 10,
+      "ОД": 0,
+      "П": 40
+    }
+  },
+  "доступ": [
+    "геометрическое расстояние, r = 500 м",
+    "OpenStreetMap, пешком ≤ 10 мин"
+  ],
+  "ограничение доступности": null,
+  "школы и сады": "Точный BlocksNet 1.0.0.dev1, весь набор, раздел 12",
+  "подробности режима": "blocksnet: competitive_provision, пешеходная матрица, нормы blocksnet (раздел 12)",
+  "пешеходная матрица": [
+    {
+      "файл": "data/gatchina_layers/access/matrix_walk.npz",
+      "sha256": "89198a6e38e9b3180487ed19e7377a9a3131f0697ffc69392f443c951dc700e4"
+    },
+    {
+      "файл": "data/gatchina_layers/access/matrix_walk.json",
+      "sha256": "505d0cdea8f07675d8a124ab65ebd6e8ec05498a5760b9e1b08fc23a547894cb"
+    }
+  ],
+  "исходные слои": [
+    {
+      "файл": "data/gatchina_layers/кварталы.gpkg",
+      "sha256": "dd51e7754ca5d389d797ccccd45cbcd8b236befe19ff67a8ce2bddcd72a71601"
+    },
+    {
+      "файл": "data/gatchina_layers/здания.geojson",
+      "sha256": "7b5684d44c950da6d279d49382beea7427f9ea81e58945e0d0f6703e71765f38"
+    },
+    {
+      "файл": "data/gatchina_layers/services/bank.geojson",
+      "sha256": "e3962dd1aa65a404daaeb44d8098f38d5fb23d15367ce7c8ef7016e6ee2f1611"
+    },
+    {
+      "файл": "data/gatchina_layers/services/bar.geojson",
+      "sha256": "832ecaf6278845e1223f15941c8e068ae20acbfb869e5fe793f153b9eb7dffc8"
+    },
+    {
+      "файл": "data/gatchina_layers/services/beauty.geojson",
+      "sha256": "7214144b8871e3b8c824c7d99e63a55b608bafc07ae0f3b3d18d496515b9998d"
+    },
+    {
+      "файл": "data/gatchina_layers/services/bus_station.geojson",
+      "sha256": "29645c2aae256188942ef8c6a702dc6cc582d427fa5bf5e46ea07892227ec479"
+    },
+    {
+      "файл": "data/gatchina_layers/services/bus_stop.geojson",
+      "sha256": "1565095cd18554b9e3d00e90a5c32e6153ae1fc92fe3b4e002f129111c9bdb23"
+    },
+    {
+      "файл": "data/gatchina_layers/services/cafe.geojson",
+      "sha256": "9d2099fa997864d7f3391c1d8aa20f8f1f0030cb6214ba6f6a30e295620b2066"
+    },
+    {
+      "файл": "data/gatchina_layers/services/camp.geojson",
+      "sha256": "d003ed52fe33e435b244265979f8b08e3d7431e7d31bb8443e37cb99544a0527"
+    },
+    {
+      "файл": "data/gatchina_layers/services/chemical.geojson",
+      "sha256": "ac8083874a0392391138a3f1eba8ae260f11270c77eac45f2c9111c8a94ac02c"
+    },
+    {
+      "файл": "data/gatchina_layers/services/cinema.geojson",
+      "sha256": "8ee1957e04a7cf9f9d0ea735587b58e4a30c01c10c89bf71c88e160f3e17e3ac"
+    },
+    {
+      "файл": "data/gatchina_layers/services/clothes.geojson",
+      "sha256": "b595c13544ec62e2f0be043f29180f0c0c1e5cb49156f57ca5efda1dc01c9276"
+    },
+    {
+      "файл": "data/gatchina_layers/services/college.geojson",
+      "sha256": "391ec60f51cff9e3921acd280ce2d881c9b5eded27861cbd3c93944d097a1b08"
+    },
+    {
+      "файл": "data/gatchina_layers/services/construction.geojson",
+      "sha256": "274e04ddc0d2b4511389c33a63d6bca8ad466b19a3b51dc31dde6bf388eb3307"
+    },
+    {
+      "файл": "data/gatchina_layers/services/convenience.geojson",
+      "sha256": "74e34137b6215491140283f73cfa62d95996b2c7a5e056caeeb0582e9ad86140"
+    },
+    {
+      "файл": "data/gatchina_layers/services/dentist.geojson",
+      "sha256": "9d8ed295503566681b7719ab1bc584fccc40534539a42dbf7340d2d68535f09f"
+    },
+    {
+      "файл": "data/gatchina_layers/services/electronic.geojson",
+      "sha256": "8d4683c65d6db3395f3105a9ed105896475515615e36792e65e2ce7748c94a7d"
+    },
+    {
+      "файл": "data/gatchina_layers/services/emergency.geojson",
+      "sha256": "41bb8cceeb92c4281e93f5910a194330aad3a1ab7c035ca3be6063fbb569dbcd"
+    },
+    {
+      "файл": "data/gatchina_layers/services/engineering.geojson",
+      "sha256": "96b33fa18a804636b23c9592a66d95205fa44b3c1a0684be4b6548bfab782f5a"
+    },
+    {
+      "файл": "data/gatchina_layers/services/extra_education.geojson",
+      "sha256": "523e0606a7297f1d16b10eb1fe317f814b739995d75de48366161dd821acd810"
+    },
+    {
+      "файл": "data/gatchina_layers/services/fire_station.geojson",
+      "sha256": "d817362b02aaaa6c923d5203773b5fa3322e91f37b868a407347bd5db433260f"
+    },
+    {
+      "файл": "data/gatchina_layers/services/food_industry.geojson",
+      "sha256": "2de55ab173200c40983e997546e3a444b25fdab25faaee11c187dca4cc627a20"
+    },
+    {
+      "файл": "data/gatchina_layers/services/hairdresser.geojson",
+      "sha256": "0807555ac9639efe6ce29608a98f570b21e6ebbf8633811a569c99ae32089d0f"
+    },
+    {
+      "файл": "data/gatchina_layers/services/historic.geojson",
+      "sha256": "a0a0c8c1e982ed2d94633bfb9a4b5e03bc2b5093b4dd87ca30418219e11185c6"
+    },
+    {
+      "файл": "data/gatchina_layers/services/hospital.geojson",
+      "sha256": "58ee8ca87a02df86bd3431a682b7e1a0bc7f3748f2e18bc53f9d15c3f2d7e287"
+    },
+    {
+      "файл": "data/gatchina_layers/services/hostel.geojson",
+      "sha256": "61e6e91256f1bc2fd6a36ad5975bb2aa8431fee97a7c0b9a02de57c2a814edd1"
+    },
+    {
+      "файл": "data/gatchina_layers/services/hotel.geojson",
+      "sha256": "496e60aa105595ea418ac797d172435f76b1ab1ab9213138f49b52378abfcc18"
+    },
+    {
+      "файл": "data/gatchina_layers/services/houseware.geojson",
+      "sha256": "ba4c4c018641314a543365b887bcece97db78ee457929ce44f9cfc7ee8bf231b"
+    },
+    {
+      "файл": "data/gatchina_layers/services/kindergarten.geojson",
+      "sha256": "4913fa5d8192f6417b485f675256d7756a3e655eb92364b67ad8a39094f61fd8"
+    },
+    {
+      "файл": "data/gatchina_layers/services/lawyer.geojson",
+      "sha256": "608886f3ff54564014b22ea120e87ded784739a88a4a1a830b1eae3022dc08f4"
+    },
+    {
+      "файл": "data/gatchina_layers/services/library.geojson",
+      "sha256": "5f7df17f0222477e05e211ea2249f948c4aa9eb60b921a5cb72c8089f75c8851"
+    },
+    {
+      "файл": "data/gatchina_layers/services/mall.geojson",
+      "sha256": "fecf737fb7ee3712c161ae9f9dd8a82501fdc3b0a2fc34679589276d55cc1400"
+    },
+    {
+      "файл": "data/gatchina_layers/services/marketplace.geojson",
+      "sha256": "2b5d13eb78bb1e7cff38527ef08edcd0686e31d3b589cbdc0e8ae3861aa408cf"
+    },
+    {
+      "файл": "data/gatchina_layers/services/metallurgy.geojson",
+      "sha256": "c5262ea6a4705207bab7ad694f8bbdfaa9459f675c0ae616b1f167cd83c0afcc"
+    },
+    {
+      "файл": "data/gatchina_layers/services/mfz.geojson",
+      "sha256": "391a21633f5e3c7682ad460f6c7796e9eb6f08708b14e4d4d6b9ed2f1f6e63b4"
+    },
+    {
+      "файл": "data/gatchina_layers/services/museum.geojson",
+      "sha256": "50411e95d68e324364e4b647ce7c2916cb6a43b98b63d4480b84f983c9e555a5"
+    },
+    {
+      "файл": "data/gatchina_layers/services/park.geojson",
+      "sha256": "b6fec8da321430f014134a3b0d2c09bf7f3639b0b0ff2db278cdfa6c15698b04"
+    },
+    {
+      "файл": "data/gatchina_layers/services/pharmacy.geojson",
+      "sha256": "6c74db9ce589804b2df3a47f13c3ca4e81b01db78694f6e7f26c784a8e32f7ef"
+    },
+    {
+      "файл": "data/gatchina_layers/services/pitch.geojson",
+      "sha256": "570668757cb53f0aa28bd9ee2074152ab75661aa32bbb1db42289844d494ae2b"
+    },
+    {
+      "файл": "data/gatchina_layers/services/playground.geojson",
+      "sha256": "f037ca3bfe5b798eb5095e6278d2d77c93193df452e897a08476aec6467f5c4f"
+    },
+    {
+      "файл": "data/gatchina_layers/services/police.geojson",
+      "sha256": "2183e248cc6d1610fe0aad0b2620e8629c6be8e447778b1a30a91b163926804b"
+    },
+    {
+      "файл": "data/gatchina_layers/services/polyclinic.geojson",
+      "sha256": "aa6c63a01ba71afb09a963f5570305a257eec9cbcb1e68fdd263730666ed2e65"
+    },
+    {
+      "файл": "data/gatchina_layers/services/post_office.geojson",
+      "sha256": "adbe61572fd92909d5386b4fb4618b6648205b1672d9d2cd3aa1048a4c992a0d"
+    },
+    {
+      "файл": "data/gatchina_layers/services/recruitment.geojson",
+      "sha256": "26504efad92b5413716c88d4adae93db992d120be802d367c6300fc5384b679f"
+    },
+    {
+      "файл": "data/gatchina_layers/services/register_office.geojson",
+      "sha256": "6af80d45f36ab1c0257f6e7fca5c952bf99a8a56507bfea0c2f75a9e1fbb537a"
+    },
+    {
+      "файл": "data/gatchina_layers/services/religion.geojson",
+      "sha256": "ea7e1a7370c23398847aeba08b18ad175574988c40d5e2a0c7f176c5e5367fff"
+    },
+    {
+      "файл": "data/gatchina_layers/services/restaurant.geojson",
+      "sha256": "b4d90f516efd91fba66f22efa27b3eef77452a27a378e1071b61ce38434c21fa"
+    },
+    {
+      "файл": "data/gatchina_layers/services/roddom.geojson",
+      "sha256": "5c73cb50740520eaf92d4f2603c60f899778c98668116067eaf1078dc7d89f4e"
+    },
+    {
+      "файл": "data/gatchina_layers/services/school.geojson",
+      "sha256": "63ac9abba694c06c7471f7e75c155d159ba08084ae5f1ad91a4d7764e22f0607"
+    },
+    {
+      "файл": "data/gatchina_layers/services/shop_sport.geojson",
+      "sha256": "4001939fbf647b23b55a4c16c05cc2500a4801802ac363fcdba3196b88466397"
+    },
+    {
+      "файл": "data/gatchina_layers/services/sport_centre.geojson",
+      "sha256": "decbac87d13e76794146359ed512e4ad742d18d602438eb03f2ef13dfface237"
+    },
+    {
+      "файл": "data/gatchina_layers/services/stadium.geojson",
+      "sha256": "686ba6d3985c72764a3f2c1c24419605d3d554b01b028babbc013188b535940e"
+    },
+    {
+      "файл": "data/gatchina_layers/services/swimming_pool.geojson",
+      "sha256": "044a4e9e4f3eccad8be4450c342c59b23810e0d5eca9f306ccbbe6b5d4a16495"
+    },
+    {
+      "файл": "data/gatchina_layers/services/theatre.geojson",
+      "sha256": "b18b186376bfccfa6f7e09a2bd03fca2d424f1b2ed4a3a43ed878615594e4147"
+    },
+    {
+      "файл": "data/gatchina_layers/services/train_building.geojson",
+      "sha256": "656916f0b16ef1cd277b0419f11e1e648ff7df87ed1267b95cf8e0618f8a36b3"
+    },
+    {
+      "файл": "data/gatchina_layers/services/train_station.geojson",
+      "sha256": "3d76aee2c4bf1dfa59feebf467d919425f2b0e059a19fe92b8e3671c9d323772"
+    },
+    {
+      "файл": "data/gatchina_layers/services/trauma.geojson",
+      "sha256": "7c93b253f513294da3ada00989290491a6a52c5dfbe21ae58675d84315322692"
+    },
+    {
+      "файл": "data/gatchina_layers/services/university.geojson",
+      "sha256": "73a8f54b276a92e0f7213428a126f6b5ac0fcb4436a44f8af2f1fb554aec0669"
+    },
+    {
+      "файл": "data/gatchina_layers/services/women_clinic.geojson",
+      "sha256": "f0249f4d877db4af76ef546e1f0e6499afa1963c6dbdafb692e2703d78200f33"
+    },
+    {
+      "файл": "data/gatchina_layers/services/woodworking.geojson",
+      "sha256": "74e1ed827a799551f07a5c59ff95dfbe7b2f961e745fe5d8d836aeea7be0ca3f"
+    }
+  ],
+  "сведения о данных": {
+    "кварталов": 517,
+    "сервисов в кварталах": 988,
+    "  из них К": 422,
+    "  из них ОД": 106,
+    "  из них П": 11,
+    "  из них школа": 13,
+    "  из них детский_сад": 24,
+    "сервисов вне кварталов (не учтены)": 10,
+    "типы не из таблицы групп (не учтены)": [],
+    "школ без числа мест (принято 0 мест)": 0,
+    "детских садов без числа мест (принято 0 мест)": 0,
+    "зданий в кварталах": 7513,
+    "зданий без площади застройки (принято 0)": 0,
+    "зданий без этажности (принят 1 этаж)": 0,
+    "  домов, где площадь ограничена долей первого этажа": 4,
+    "жилых домов со встроенными помещениями": 78,
+    "  сервисов К и ОД в этих домах": 124,
+    "  встроенная площадь К / ОД, м²": "10142 / 1796",
+    "жилых домов без жилой площади (оценка (A − B)·k_liv)": 0,
+    "нежилых зданий с жителями в поле (обнулены)": 0,
+    "жилых домов без числа жителей (жители = жилая площадь ÷ q, 4.2.3)": 0,
+    "  прибавка жителей по 4.2.3": "0 (0.00 %)",
+    "нежилых зданий меньше S_min (не учтены)": 1803,
+    "шаги таблицы 4.4: зданий / поэтажная площадь, м² / рабочих мест": {
+      "1 (сервисы К, ОД, П)": "145 / 526199 / 10736",
+      "2 (социальные объекты)": "45 / 182900 / 4271",
+      "3 (сооружения в производственных зонах)": "0 / 0 / 0",
+      "4 (производственная зона, от 2 этажей)": "88 / 667674 / 9676",
+      "5 (производственная зона, одноэтажные от порога площади)": "54 / 141540 / 1747",
+      "6 (производственная зона, одноэтажные меньше порога)": "148 / 66227 / 0",
+      "7 (общественно-деловая зона)": "319 / 493975 / 9880",
+      "8 (прочее)": "325 / 373480 / 0",
+      "встроенные помещения": "78 / 11939 / 320"
+    },
+    "школ без числа мест (0 рабочих мест, шаг 2)": 0,
+    "зданий со школой и другими социальными объектами (считается школа)": 0,
+    "зданий с несколькими социальными типами без школы (норма по 4.4.3)": 3,
+    "типов без нормы (принята норма группы a_g, 4.4.3)": 0,
+    "кварталов с П: по сервисам / по зданиям шагов 4–5 / всего": "9 / 12 / 14",
+    "жителей": 91464,
+    "рабочих мест: основная оценка (А + Б)": 36630,
+    "рабочих мест: нижняя граница (только А)": 15327,
+    "K_ref — рабочих мест на жителя в среднем": 0.4,
+    "мест в школах / детских садах": "10370 / 4970"
+  },
+  "предупреждения": [
+    "Масштаб: вариант добавляет до 134 % рабочих мест всего набора и до 15 700 жителей (во всём наборе 91 464). Варианты различаются объёмом застройки сильнее, чем сочетанием функций. Проверьте КИТ или уменьшите территорию."
+  ]
+}
