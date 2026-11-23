@@ -23,8 +23,9 @@ def test_default_scenarios_v5(tmp_path):
         f.write(text[:start] + text[end + 1:])                # без своих вариантов → пять вариантов 4.6.1
     cfg = load_config(p)
     assert cfg['scenarios'] == SCENARIOS
-    assert list(cfg['scenarios']) == ['Ж+К', 'Ж+К+ОД', 'К+ОД', 'ОД+П', 'Ж+П']
-    assert cfg['scenarios']['Ж+К+ОД'] == {'Ж': 75, 'К': 5, 'ОД': 20, 'П': 0}
+    assert list(cfg['scenarios']) == ['Ж+К', 'Ж+К+ОД', 'К+ОД', 'К+ОД+П', 'Ж+К+П']
+    assert cfg['scenarios']['Ж+К+ОД'] == {'Ж': 50, 'К': 15, 'ОД': 35, 'П': 0}
+    assert cfg['scenarios']['К+ОД'] == {'Ж': 0, 'К': 35, 'ОД': 65, 'П': 0}
 
 NL = chr(10)
 SP_ROW = 'params: {kit_sp_row: zh_low_mid}' + NL     # КИТ по СП 42.13330.2016, табл. Б.1: 0,8

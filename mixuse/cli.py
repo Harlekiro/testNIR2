@@ -132,6 +132,9 @@ def cmd_compare(args):
             cfg['territory'] = [int(x) for x in args.territory.split(',') if x.strip()]
         except ValueError:
             raise ConfigError('--territory: номера кварталов через запятую, например --territory 12,13')
+    if args.paired:
+        from .params import paired_scenarios
+        cfg['scenarios'] = paired_scenarios()
     L, city = _prepare(cfg)
     P, SCN, T = cfg['params'], cfg['scenarios'], cfg['territory']
     out = _out_dir(cfg, args); code = cfg['name']
@@ -175,7 +178,8 @@ def cmd_compare(args):
     show = args.show or (list(SCN)[1] if len(SCN) > 1 else list(SCN)[0])
     if show not in SCN:
         raise ConfigError(f'--show: варианта «{show}» нет. Есть: {", ".join(SCN)}')
-    files += [export.map_png(city, det, show, P['R'], cfg.get('title') or code, export.out_path(out, code, f'карта_{show.split()[0]}.png')),
+    map_path = export.out_path(out, code, export.scenario_map_name(show, SCN))
+    files += [export.map_png(city, det, show, P['R'], cfg.get('title') or code, map_path),
               export.blocks_geojson(city, export.out_path(out, code, 'кварталы.geojson'), det, SCN),
               export.report_txt(lines, export.out_path(out, code, 'отчёт_подготовки.txt')),
               export.buildings_csv(city, export.out_path(out, code, 'здания.csv'))]
@@ -405,6 +409,7 @@ def build_parser():
             c.add_argument('--quick', action='store_true', help='только проверка файлов и полей, без пробного расчёта')
         if name == 'compare':
             c.add_argument('--territory', help='номера кварталов территории через запятую (вместо territory: в настройках)')
+            c.add_argument('--paired', action='store_true', help='сравнить два эмпирических и пять экспериментальных сценариев')
             c.add_argument('--show', help='какой вариант показать на карте')
             c.add_argument('--fast', action='store_true', help='без шагов 7 и 7б')
             c.add_argument('--near', type=float, help='обеспеченность blocksnet — только по кварталам не дальше стольких '

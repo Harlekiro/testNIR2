@@ -1,4 +1,4 @@
-"""Эталоны правил v5 (tests/etalon/v5/, этап 5): пакет и рабочий ноутбук воспроизводят их.
+"""Эталоны правил v5 (tests/etalon/v5/, этап 5) и исторические сценарии ноутбука Высоцка.
 
 Эталоны посчитаны командой `python -m mixuse compare configs/<код>.yaml --out tests/etalon/v5/<код>` (19.11.2026).
 Петербург: проверяются таблица кварталов, сравнение, шаг 7 и 4.8.3–4.8.4; шаг 7б и 4.8.5 (по 3–4 пересчёта
@@ -27,6 +27,14 @@ pytestmark = pytest.mark.filterwarnings('ignore:FigureCanvasAgg is non-interacti
 
 def ref(code, name, **kw):
     return pd.read_csv(os.path.join(ETALON, code, f'{code}_{name}.csv'), encoding='utf-8-sig', **kw)
+
+
+def notebook_reference_path(code, filename):
+    if code == 'vysotsk':
+        legacy = os.path.join(ETALON, '..', 'v5_legacy', code, filename)
+        if os.path.exists(legacy):
+            return legacy
+    return os.path.join(ETALON, code, filename)
 
 
 STR = dict(dtype=str, keep_default_na=False)
@@ -84,7 +92,7 @@ def test_checks(run):
 
 @pytest.mark.parametrize('code', ['vysotsk', 'gatchina_layers'])
 def test_notebook_v5(code, tmp_path):
-    """Рабочий ноутбук по умолчанию считает v5: его файлы совпадают с эталонами results_v5."""
+    """Ноутбук воспроизводит эталоны для своих явно заданных сценариев."""
     cfg = load_config(os.path.join(ROOT, 'configs', f'{code}.yaml'))
     if not os.path.exists(cfg['blocks']):
         pytest.skip(f'нет данных набора {code}')
@@ -94,4 +102,5 @@ def test_notebook_v5(code, tmp_path):
     same_table(ref(code, 'таблица_кварталов'), got('таблица_кварталов'))
     for name, kw in [('сравнение_вариантов', {'index_col': 0}), ('сравнение_подробно', {'index_col': 0}),
                      ('устойчивость', {}), ('встроенные', {}), ('оценки', {}), ('порог_цеха', {}), ('здания', {})]:
-        same_strings(ref(code, name, **kw, **STR), got(name, **kw, **STR))
+        path = notebook_reference_path(code, f'{code}_{name}.csv')
+        same_strings(pd.read_csv(path, encoding='utf-8-sig', **kw, **STR), got(name, **kw, **STR))

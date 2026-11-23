@@ -194,8 +194,8 @@ def sensitivity(city, T, P, SCN, Rs=(500, 800, 1000), kits=(1.4, 2.0)):
             sch = tb.loc['Школы: без свободного места в окружении', list(SCN)]   # 4.8.1: дети без места (4.7.0)
             rows.append({'R, м': R, 'КИТ': kit, 'кварталов в окружении': inf['кварталов в окружении'],
                          'K окружения как есть': k['Как есть'],
-                         **{f'изменение K {s.split()[0]}': round(k[s] - k['Как есть'], 2) for s in SCN},
-                         **{f'школы: без свободного места {s.split()[0]}': sch[s] for s in SCN}})
+                         **{f'изменение K {s}': round(k[s] - k['Как есть'], 2) for s in SCN},
+                         **{f'школы: без свободного места {s}': sch[s] for s in SCN}})
     return pd.DataFrame(rows)
 
 
@@ -207,7 +207,7 @@ def builtin_sensitivity(L, cfg, P, T, SCN, s0_values=(50, 100, 300)):
     """Шаг 7б. Таблица кварталов и сравнение пересчитываются без встроенных помещений и при разных s0.
 
     Таблица — как results/<код>_встроенные.csv.
-    Имя столбца «K окружения Как» повторяет ноутбук (первое слово названия варианта «Как есть»).
+    Имя столбца «K окружения Как» сохранено для совместимости с эталонами ноутбука.
     """
     rows = []
     runs = [('без встроенных', dict(P, builtin=False))] + [(f's0 = {s0} м²', dict(P, builtin_s0=s0)) for s0 in s0_values]
@@ -217,7 +217,7 @@ def builtin_sensitivity(L, cfg, P, T, SCN, s0_values=(50, 100, 300)):
         rows.append({'расчёт': name,
                      'встроенная площадь К, м²': int(round(t2['встр_К'].sum())), 'встроенная площадь ОД, м²': int(round(t2['встр_ОД'].sum())),
                      'рабочих мест': int(round(t2['jobs'].sum())), 'K_ref': round(float(t2['jobs'].sum() / t2['pop'].sum()), 3),
-                     **{f'K окружения {s.split()[0]}': tb.loc['K окружения', s] for s in ['Как есть'] + list(SCN)}})
+                     **_k_rows(tb, SCN, 'K окружения')})
     return pd.DataFrame(rows)
 
 
@@ -226,7 +226,9 @@ def builtin_sensitivity(L, cfg, P, T, SCN, s0_values=(50, 100, 300)):
 # ================================================================================================
 
 def _k_rows(tb, SCN, row):
-    return {f'K окружения {s.split()[0]}': tb.loc[row, s] for s in ['Как есть'] + list(SCN)}
+    baseline = 'Как есть' if 'Как' in SCN else 'Как'
+    return {f'K окружения {baseline}': tb.loc[row, 'Как есть'],
+            **{f'K окружения {s}': tb.loc[row, s] for s in SCN}}
 
 
 def estimates_check(city, T, P, SCN):

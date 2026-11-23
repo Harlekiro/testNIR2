@@ -4,6 +4,7 @@
 """
 import json
 import os
+import re
 
 import numpy as np
 import pandas as pd
@@ -36,6 +37,10 @@ def _geom(g):
     return {'type': 'MultiPolygon', 'coordinates': [[r.tolist() for r in p] for p in g[1]]}
 
 
+def _blocks_crs(city):
+    return 'urn:ogc:def:crs:OGC:1.3:CRS84' if city['epsg'] in (4326, None) else f'urn:ogc:def:crs:EPSG::{city["epsg"]}'
+
+
 def blocks_geojson(city, path, det=None, SCN=None):
     """Слой кварталов для QGIS в исходной системе координат кварталов.
     Если передано сравнение — поля «территория», «окружение», «доступ <вариант>» (+1 появились, −1 пропали)."""
@@ -47,13 +52,24 @@ def blocks_geojson(city, path, det=None, SCN=None):
         if det:
             props['территория'] = k in inT; props['окружение'] = k in inE
             for s in SCN:
-                props['доступ ' + s.split()[0]] = det['effect'][s].get(k, 0)
+                props['доступ ' + s] = det['effect'][s].get(k, 0)
         feats.append({'type': 'Feature', 'properties': props, 'geometry': _geom(city['orig'][k])})
-    crs = 'urn:ogc:def:crs:OGC:1.3:CRS84' if city['epsg'] in (4326, None) else f'urn:ogc:def:crs:EPSG::{city["epsg"]}'
     with open(path, 'w', encoding='utf-8') as f:
-        json.dump({'type': 'FeatureCollection', 'crs': {'type': 'name', 'properties': {'name': crs}}, 'features': feats},
+        json.dump({'type': 'FeatureCollection', 'crs': {'type': 'name', 'properties': {'name': _blocks_crs(city)}}, 'features': feats},
                   f, ensure_ascii=False)
     return path
+
+
+def scenario_map_name(name, scenarios):
+    """Имя PNG с полным названием варианта или его прежним уникальным номером С1, С2, …"""
+    numbered = re.match(r'^([СC]\d+)\s', name)
+    if numbered:
+        number = numbered[1]
+        if not any(other != name and (other == number or re.match(rf'^{number}\s', other))
+                   for other in scenarios):
+            name = number
+    safe_name = re.sub(r'[<>:"/\\|?*%\x00-\x1f]', lambda match: f'%{ord(match[0]):02X}', name)
+    return f'карта_{safe_name}.png'
 
 
 def map_png(city, det, show, R, title, path):
@@ -123,11 +139,12 @@ def buildings_csv(city, path):
 def web_json_v5(city, cfg, path, pdat=None, clip=None):
     """Файл для страницы (этап 7): формат страницы страница/конструктор.html —
     кварталы с контурами в метрах и показателями, точки метро и остановок, параметры (КИТ: kit, kit_source, kit_sp_row),
-    варианты; если есть точный расчёт blocksnet «как есть» (pdat) — данные для оценки обеспеченности (provision).
+    варианты и исходная геометрия для экспорта GeoJSON. Если есть точный расчёт blocksnet «как есть» (pdat),
+    в файл входят данные для оценки обеспеченности (provision).
     clip — оставить кварталы, центр которых не дальше clip м от центра территории (для большого города;
     totals — по всему набору)."""
     from .groups import zone_group
-    from .params import SP42_B1
+    from .params import SP42_B1, SCENARIO_ORIGINS, paired_scenarios
     t = city['table']
     P, rules = cfg['params'], cfg.get('zone_rules', [])
     keep = np.arange(len(t))
@@ -151,6 +168,7 @@ def web_json_v5(city, cfg, path, pdat=None, clip=None):
             'sc': round(float(row['cap_school'])), 'kg': round(float(row['cap_kinder'])), 'fa': round(float(row['fa']), 1),
             'nb': int(row['n_bld']), 'nbd': int(row['n_bld_default']),
             'g': [[np.round(r, 2).tolist() for r in p] for p in city['polys'][k]],
+            'geo': _geom(city['orig'][k])['coordinates'],
         })
     from .compare import CITY_SHARE
     params = {k: P.get(k) for k in ('kit', 'kit_source', 'kit_sp_row', 'R', 'r', 'q', 'k_liv', 'a_К', 'a_ОД', 'a_П',
@@ -160,6 +178,8 @@ def web_json_v5(city, cfg, path, pdat=None, clip=None):
            'name': cfg.get('title') or cfg['name'], 'code': cfg['name'], 'territory': T_ids,
            'totals': {'pop': float(t['pop'].sum()), 'jobs': float(t['jobs'].sum()), 'jobsA': float(t['jobs_A'].sum())},
            'clip': float(clip or 0), 'params': params, 'scenarios': cfg['scenarios'],
+           'paired_scenarios': paired_scenarios(), 'scenario_origins': SCENARIO_ORIGINS,
+           'blocks_crs': _blocks_crs(city),
            'sp42': {k: [n, v] for k, (n, v) in SP42_B1.items()},
            'blocks': blocks,
            'pts': {'metro': np.round(city['pts']['метро'], 2).tolist(), 'stop': np.round(city['pts']['остановка'], 2).tolist()}}

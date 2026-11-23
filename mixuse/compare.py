@@ -10,7 +10,7 @@ import pandas as pd
 
 from .geometry import dist_points_to_polys
 from .groups import FUNCS
-from .scenarios import normalize
+from .scenarios import RESERVED_SCENARIO_NAMES, normalize
 
 
 class TerritoryError(UserMessage, ValueError):
@@ -130,6 +130,9 @@ def compare_v5(city, T_ids, P, SCN, prov=None):
     строки школ и садов — 12.5 (обеспеченность окружения в пределах доступности, дети с территории, из них обеспечены,
     изменение обеспеченности окружения, получили место вообще); без неё — запасной расчёт 4.7.3.
     Возвращает (подробная таблица, сводка, данные: краткая таблица, выводы, карта)."""
+    reserved = RESERVED_SCENARIO_NAMES.intersection(SCN)
+    if reserved:
+        raise ValueError(f'Зарезервированные названия вариантов: {", ".join(sorted(reserved))}.')
     t = city['table']; G = city['geom']
     T = territory_indices(t, T_ids)
     E, inT, distT = environment(city, T, P['R'])

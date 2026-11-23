@@ -18,6 +18,7 @@ from conftest import ROOT
 from mixuse.config import load_config
 from mixuse.blocks import load_layers, build_table
 from mixuse.compare import compare
+from mixuse.params import SCENARIO_ORIGINS, paired_scenarios
 from mixuse.provision_estimate import load_page_data, estimate_variants
 from mixuse import export
 
@@ -123,6 +124,32 @@ def test_page_equals_package(code, tmp_path):
                 assert norm_text(q['concl']) == det['conclusions'][name], (T, name)
 
 
+def test_paired_page_single_block_matches_package(tmp_path):
+    if not NODE:
+        pytest.skip('Node.js не найден')
+    cfg = load_config(os.path.join(ROOT, 'configs', 'vysotsk.yaml'))
+    city = build_table(load_layers(cfg, cfg['_groups']), cfg, cfg['params'], cfg['_groups'])
+    path = tmp_path / 'vysotsk.json'
+    export.web_json_v5(city, cfg, path)
+    data = json.loads(path.read_text(encoding='utf-8'))
+    assert data['scenarios'] == cfg['scenarios']
+    assert data['paired_scenarios'] == paired_scenarios()
+    assert data['scenario_origins'] == SCENARIO_ORIGINS
+    assert data['blocks_crs'].endswith('CRS84')
+    i = next(i for i, b in enumerate(data['blocks']) if b['id'] == 305)
+    assert data['blocks'][i]['geo'] == export._geom(city['orig'][i])['coordinates']
+
+    data['scenarios'] = data['paired_scenarios']
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
+    kit = {'mode': 'sp', 'spRow': cfg['params']['kit_sp_row']}
+    [page] = run_page(path, [{'territory': [305], 'kit': kit}], tmp_path)
+    _, _, detail = compare(city, [305], cfg['params'], paired_scenarios())
+    assert list(page['out']) == ['Как есть', *paired_scenarios()]
+    for name, variant in detail['values'].items():
+        for metric in ('N', 'J', 'K', 'sNo', 'kNo'):
+            assert page['out'][name][metric] == pytest.approx(variant[metric], rel=1e-3, abs=0.01)
+
+
 DOM_STUB = r'''
 const els={};
 function el(id){if(!els[id])els[id]={id,value:'',innerHTML:'',textContent:'',disabled:false,style:{},files:[],
@@ -147,13 +174,17 @@ def test_page_renders(code, tmp_path):
 const D0=JSON.parse(require('fs').readFileSync(process.argv[2],'utf8'));
 use(D0);
 const res=document.getElementById('res').innerHTML,full=document.getElementById('resFull').innerHTML;
+document.getElementById('scenarioMode').value='paired';
+document.getElementById('scenarioMode').onchange();
+const joint=document.getElementById('res').innerHTML;
 process.stdout.write(JSON.stringify({res,full,kit:document.getElementById('kitSrc').textContent,
-  info:document.getElementById('info').innerHTML,warn:document.getElementById('warn').innerHTML}));
+  joint,info:document.getElementById('info').innerHTML,warn:document.getElementById('warn').innerHTML}));
 ''', encoding='utf-8')
     r = subprocess.run([NODE, str(js), data], capture_output=True, timeout=600)
     assert r.returncode == 0, r.stderr.decode('utf-8', 'replace')
     out = json.loads(r.stdout.decode('utf-8'))
     assert 'Вывод' in out['res'] and 'Жители на территории' in out['res'] and 'Ж+К+ОД' in out['res']
+    assert '[эмп.]' not in out['res'] and all(name in out['joint'] for name in paired_scenarios())
     assert 'обеспеченность окружения в пределах доступности' in out['full']
     assert 'СП 42.13330.2016' in out['kit']                       # Высоцк и Гатчина: КИТ по СП (kit_sp_row)
     assert 'раз плотнее' in out['info'] or 'раз реже' in out['info']

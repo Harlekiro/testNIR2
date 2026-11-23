@@ -23,7 +23,7 @@ import pandas as pd
 import pytest
 
 from conftest import ROOT, ETALON_V5, same_strings
-from test_etalon_v5 import same_table, STR
+from test_etalon_v5 import notebook_reference_path, same_table, STR
 from user_forms import FORMS
 
 RUNNER = r'''
@@ -116,7 +116,7 @@ def test_acceptance_as_user(code, tmp_path):
     for name in sorted(os.listdir(ref_dir)):
         got = os.path.join(prog, 'results', name.replace(code + '_', code + '_user_', 1))
         assert os.path.exists(got), got
-        ref = os.path.join(ref_dir, name)
+        ref = notebook_reference_path(code, name)
         if name.endswith('таблица_кварталов.csv'):
             same_table(pd.read_csv(ref, encoding='utf-8-sig'), pd.read_csv(got, encoding='utf-8-sig'))
         else:
@@ -128,7 +128,7 @@ def test_acceptance_as_user(code, tmp_path):
 
 def test_vysotsk_example_from_clean_archive(tmp_path):
     """Пример Высоцка считается из чистого архива (git archive HEAD) без докладывания файлов: слои data/vysotsk/
-    в репозитории; ноутбук с ПРИМЕР = 'vysotsk' даёт эталоны tests/etalon/v5/vysotsk (запасной расчёт школ и садов);
+    в репозитории; ноутбук с ПРИМЕР = 'vysotsk' даёт исторические эталоны (запасной расчёт школ и садов);
     матрица доступности из архива подходит к слою кварталов (контрольная сумма — слой передан байт в байт)."""
     if subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT, capture_output=True).returncode:
         pytest.skip('нет git')
@@ -158,7 +158,8 @@ print('MATRIX_OK', mx.shape)
     assert 'MATRIX_OK (473, 473)' in out
     ref_dir = os.path.join(ETALON_V5, 'vysotsk')
     for name in sorted(os.listdir(ref_dir)):
-        got, ref = os.path.join(prog, 'results', name), os.path.join(ref_dir, name)
+        got = os.path.join(prog, 'results', name)
+        ref = notebook_reference_path('vysotsk', name)
         assert os.path.exists(got), got
         if name.endswith('таблица_кварталов.csv'):
             same_table(pd.read_csv(ref, encoding='utf-8-sig'), pd.read_csv(got, encoding='utf-8-sig'))

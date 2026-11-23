@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 GROUPS = ['Ж', 'К', 'ОД', 'П']
+RESERVED_SCENARIO_NAMES = frozenset({'Как есть', '_source', '_warnings'})
 
 
 def normalize(shares):
@@ -17,6 +18,8 @@ def validate_scenarios(scn):
     if not scn:
         return ['Не задано ни одного варианта (раздел scenarios:).']
     for name, sh in scn.items():
+        if name in RESERVED_SCENARIO_NAMES:
+            errors.append(f'Название варианта «{name}» зарезервировано.')
         if not isinstance(sh, dict):
             errors.append(f'Вариант «{name}»: нужны доли вида {{Ж: 60, К: 10, ОД: 30, П: 0}}.')
             continue

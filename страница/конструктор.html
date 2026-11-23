@@ -12,8 +12,8 @@ header{padding:14px 20px;border-bottom:1px solid var(--line);background:var(--ca
 h1{font-size:17px;margin:0;font-weight:600}
 .sub{color:var(--mut);font-size:12.5px}
 main{display:grid;grid-template-columns:minmax(380px,1fr) minmax(520px,1.25fr);gap:14px;padding:14px}
-@media(max-width:1100px){main{grid-template-columns:1fr}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+@media(max-width:1100px){main{grid-template-columns:minmax(0,1fr)}}
+.card{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 select,input,button{font:inherit}
 select,input[type=number]{padding:4px 6px;border:1px solid #c9c6c0;border-radius:6px;background:#fff;color:#1f2328}
@@ -63,10 +63,16 @@ details summary{cursor:pointer;color:var(--mut);font-size:12.5px}
 </header>
 <main>
 <section class="card">
+  <div id="datasetNote" class="sub"></div>
   <div class="row">
     <b>Территория:</b> <span id="tsel" class="sub">—</span>
     <button id="preset">Территория из расчёта</button>
     <button id="clear">Очистить</button>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <label>Номера кварталов <input id="blockIds" type="text" placeholder="305, 309"></label>
+    <button id="selectIds">Выбрать</button>
+    <span id="selectionError" class="sub" role="status"></span>
   </div>
   <div class="sub" style="margin-top:6px">Щелчок по кварталу добавляет его в территорию или убирает. Колесо — масштаб, перетаскивание — сдвиг.</div>
   <div id="mapwrap"><canvas id="map"></canvas><div id="tip"></div></div>
@@ -97,6 +103,10 @@ details summary{cursor:pointer;color:var(--mut);font-size:12.5px}
     <span id="kitSrc" class="sub"></span>
   </div>
   <div class="row" style="margin-top:6px">
+    <label>Сценарии <select id="scenarioMode">
+      <option value="standard">Стандартный набор</option>
+      <option id="pairedOption" value="paired" disabled>2 эмпирических + 5 экспериментальных</option>
+    </select></label>
     <label>R, м <input id="R" type="number" step="50" min="100"></label>
     <label>r, м <input id="r" type="number" step="50" min="100"></label>
     <span id="normsBox" class="row">
@@ -106,6 +116,7 @@ details summary{cursor:pointer;color:var(--mut);font-size:12.5px}
     <button class="pri" id="run">Пересчитать</button>
   </div>
   <div class="sub" id="normsNote" style="margin-top:4px"></div>
+  <div class="sub" id="scenarioNote" style="margin-top:4px"></div>
   <details style="margin-top:8px"><summary>Доли вариантов, % поэтажной площади (можно менять)</summary>
     <div class="tabw"><table class="shares" id="shares"></table></div>
   </details>
@@ -113,6 +124,12 @@ details summary{cursor:pointer;color:var(--mut);font-size:12.5px}
   <div class="info" id="info"></div>
   <div class="tabw"><table id="res"><tr><td>Выберите пример или загрузите свой файл.</td></tr></table></div>
   <details style="margin-top:10px"><summary>Подробно: все показатели</summary><div class="tabw"><table id="resFull"></table></div></details>
+  <div class="row" style="margin-top:10px">
+    <button id="csvShort" disabled>Краткая таблица CSV</button>
+    <button id="csvFull" disabled>Подробная таблица CSV</button>
+    <button id="geojson" disabled>Кварталы GeoJSON</button>
+    <button id="png" disabled>Карта PNG</button>
+  </div>
   <div class="note">
     F = площадь территории × КИТ; N = F·δЖ·k_liv ÷ q; J = F·(δК÷28 + δОД÷15 + δП÷69). Существующая застройка территории в вариантах заменяется полностью.
     K окружения = (рабочие места окружения + J) ÷ (жители окружения + N); нижняя граница — только рабочие места категории А.
@@ -277,25 +294,48 @@ function conclusion(o,base,P,city){   // вывод 4.7.0 — как conclusion(
 }
 // ==== РАСЧЁТ (конец)
 
-const cache={};let D=null,B=[],sel=new Set(),last=null,SCN0=null,SCN=null;
+const cache={};let D=null,B=[],sel=new Set(),last=null,SCN0=null,SCN=null,requestId=0;
 const $=id=>document.getElementById(id);
+const html=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const functionGroups=['Ж','К','ОД','П'];
 function params(){return {R:+$('R').value,r:+$('r').value,q:D.params.q,k_liv:D.params.k_liv,'a_К':D.params['a_К'],'a_ОД':D.params['a_ОД'],'a_П':D.params['a_П'],n_school:+$('ns').value||D.params.n_school,n_kinder:+$('nk').value||D.params.n_kinder};}
+function exportButtons(){
+  for(const id of ['csvShort','csvFull','png'])$(id).disabled=!last;
+  $('geojson').disabled=!last||!D.blocks_crs;
+  $('geojson').title=D?.blocks_crs?'':'Для GeoJSON обновите файл командой python -m mixuse page.';
+}
+function resetResults(message){
+  last=null;
+  $('res').innerHTML=`<tr><td>${html(message)}</td></tr>`;
+  $('resFull').innerHTML='';$('info').innerHTML='';$('warn').style.display='none';
+  exportButtons();draw();
+}
 function compute(){
   if(!D)return;
   const T=B.map((b,i)=>sel.has(b.id)?i:-1).filter(i=>i>=0);
-  $('spRow').style.display=$('kitMode').value==='sp'?'':'none';
-  if(!T.length){last=null;$('res').innerHTML='<tr><td>Выберите на карте хотя бы один квартал.</td></tr>';$('info').innerHTML='';$('warn').style.display='none';draw();return;}
-  const mode=$('kitMode').value;
-  last=calc(D,B,T,params(),SCN,{mode,value:$('kit').value,spRow:$('spRow').value});
-  $('kit').value=last.kit;$('kit').disabled=mode!=='own';$('kitSrc').textContent=last.kitSrc;
-  render();draw();
+  const P=params(),mode=$('kitMode').value;
+  $('spRow').style.display=mode==='sp'?'':'none';$('kit').disabled=mode!=='own';
+  $('tsel').textContent=[...sel].join(', ')||'—';$('blockIds').value=[...sel].join(', ');
+  $('selectionError').textContent='';
+  if(!T.length){resetResults('Выберите хотя бы один квартал на карте или укажите его номер.');return;}
+  const positive=value=>Number.isFinite(value)&&value>0;
+  if(!positive(P.R)||!positive(P.r)||(mode==='own'&&!positive(+$('kit').value))){
+    resetResults('Укажите положительные значения радиусов и собственного КИТ.');return;
+  }
+  if(Object.values(SCN).some(sh=>!positive(functionGroups.reduce((sum,g)=>sum+sh[g],0)))){
+    resetResults('Задайте положительную сумму долей в каждом сценарии.');return;
+  }
+  last=calc(D,B,T,P,SCN,{mode,value:$('kit').value,spRow:$('spRow').value});
+  last.params=P;last.territory=T.map(i=>B[i].id);
+  $('kit').value=last.kit;$('kitSrc').textContent=last.kitSrc;
+  render();draw();exportButtons();
 }
 function render(){
   const {out,F,S,popE,jobsE,kit,kitE,warns}=last,names=Object.keys(out);
   $('info').innerHTML=[['Площадь территории',fmt(S/1e4,1)+' га'],['КИТ варианта / окружения',kitLine(kit,kitE)],['Поэтажная площадь F',fmt(F)+' м²'],['Жителей в окружении',fmt(popE)],['Рабочих мест в окружении',fmt(jobsE)],['Рабочих мест на жителя, весь набор',fmt(D.totals.jobs/D.totals.pop,2)]].map(([a,b])=>`<div><b>${b}</b><span>${a}</span></div>`).join('');
-  const w=$('warn');w.style.display=warns.length?'block':'none';w.innerHTML=warns.join('<br>');
-  const head=`<thead><tr><th></th>${names.map(n=>`<th>${n}</th>`).join('')}</tr></thead>`;
-  const mk=(lab,f,d=0,sign=false)=>`<tr><td>${lab}</td>${names.map(n=>{const v=f(out[n],n);const c=sign&&typeof v==='number'?(v>0?'pos':v<0?'neg':''):'';return `<td class="${c}">${typeof v==='number'?(sign&&v>0?'+':'')+fmt(v,d):v}</td>`}).join('')}</tr>`;
+  const w=$('warn');w.style.display=warns.length?'block':'none';w.innerHTML=warns.map(html).join('<br>');
+  const head=`<thead><tr><th>Показатель</th>${names.map(n=>`<th>${html(n)}</th>`).join('')}</tr></thead>`;
+  const mk=(lab,f,d=0,sign=false)=>`<tr><td>${lab}</td>${names.map(n=>{const v=f(out[n],n);const c=sign&&typeof v==='number'?(v>0?'pos':v<0?'neg':''):'';return `<td class="${c}">${typeof v==='number'?(sign&&v>0?'+':'')+fmt(v,d):html(v)}</td>`}).join('')}</tr>`;
   const sec=t=>`<tr class="sec"><td colspan="${names.length+1}">${t}</td></tr>`;
   const now=n=>n==='Как есть';
   const acc=(o,n,g)=>now(n)?'—':`+${fmt(o.acc[g][0])} / −${fmt(o.acc[g][1])}`;
@@ -309,7 +349,7 @@ function render(){
     mk('Доступ к общественно-деловой функции: получают / теряют',(o,n)=>acc(o,n,'ОД')),
     mk('Жители рядом с производством',(o,n)=>now(n)?(first?fmt(first.acc['П'][0]):'—'):fmt(o.acc['П'][1])),
     mk('Школьники / дошкольники с территории (без свободного места в окружении)'+(D.provision?' — оценка':''),(o,n)=>now(n)?`обеспеченность ${o.sP==null?'—':fmt(o.sP)} % / ${o.kP==null?'—':fmt(o.kP)} %`:`${fmt(o.sT)} / ${fmt(o.kT)} (${fmt(o.sNo)} / ${fmt(o.kNo)})`)];
-  R.push(`<tr class="concl"><td>Вывод</td><td>—</td>${names.slice(1).map(n=>`<td>${conclusion(out[n],out['Как есть'],D.params,last.city)}</td>`).join('')}</tr>`);
+  R.push(`<tr class="concl"><td>Вывод</td><td>—</td>${names.slice(1).map(n=>`<td>${html(conclusion(out[n],out['Как есть'],D.params,last.city))}</td>`).join('')}</tr>`);
   $('res').innerHTML=R.join('');
   const Q=[head];
   Q.push(sec('Работа и жильё'),mk('Жители на территории N',o=>o.N),mk('Рабочие места на территории J',o=>o.J),mk('Изменение рабочих мест к нынешним',(o,n)=>now(n)?'—':o.dJ,0,true),
@@ -330,16 +370,74 @@ function render(){
       mk('Сады: дети с территории',o=>o.kT),mk('Сады: обеспеченность окружения, %',o=>o.kP),mk('Сады: без свободного места в окружении',(o,n)=>now(n)?'—':o.kNo));
   }
   $('resFull').innerHTML=Q.join('');
-  $('tsel').textContent=[...sel].join(', ');
+}
+function setScenarios(){
+  const paired=$('scenarioMode').value==='paired'&&D.paired_scenarios;
+  SCN0=paired||D.scenarios;
+  SCN=JSON.parse(JSON.stringify(SCN0));
+  $('scenarioNote').textContent=paired?'[эмп.] — эмпирический, [эксп.] — экспериментальный. Доли набора фиксированы.':
+    D.paired_scenarios?'': 'Для сравнения семи сценариев загрузите новый JSON, созданный командой python -m mixuse page.';
+  renderShares();
 }
 function renderShares(){
-  const g=['Ж','К','ОД','П'];
+  const g=functionGroups,fixed=$('scenarioMode').value==='paired';
   $('shares').innerHTML=`<thead><tr><th>Вариант</th>${g.map(x=>`<th>${x}</th>`).join('')}</tr></thead>`+
-   Object.entries(SCN).map(([n,s])=>`<tr><td>${n}</td>${g.map(x=>`<td><input type="number" min="0" max="100" data-n="${n}" data-g="${x}" value="${s[x]}"></td>`).join('')}</tr>`).join('')+
-   `<tr><td colspan="5"><button id="resetSh">Вернуть доли по умолчанию</button></td></tr>`;
-  $('shares').querySelectorAll('input').forEach(i=>i.onchange=()=>{SCN[i.dataset.n][i.dataset.g]=Math.max(0,+i.value||0);compute();});
-  $('resetSh').onclick=()=>{SCN=JSON.parse(JSON.stringify(SCN0));renderShares();compute();};
-  $('showSel').innerHTML=Object.keys(SCN).map(n=>`<option${n==='Ж+К+ОД'?' selected':''}>${n}</option>`).join('');
+   Object.entries(SCN).map(([n,s])=>`<tr><td>${html(n)}</td>${g.map(x=>fixed?`<td>${html(s[x])}</td>`:
+     `<td><input type="number" min="0" max="100" data-n="${html(n)}" data-g="${x}" value="${html(s[x])}"></td>`).join('')}</tr>`).join('')+
+   (fixed?'':`<tr><td colspan="5"><button id="resetSh">Вернуть доли по умолчанию</button></td></tr>`);
+  if(!fixed){
+    $('shares').querySelectorAll('input').forEach(i=>i.onchange=()=>{i.value=SCN[i.dataset.n][i.dataset.g]=Math.min(100,Math.max(0,+i.value||0));compute();});
+    $('resetSh').onclick=()=>{SCN=JSON.parse(JSON.stringify(SCN0));renderShares();compute();};
+  }
+  const options=['Как есть',...Object.keys(SCN)];
+  const shown=options.includes($('showSel').value)?$('showSel').value:options[1];
+  $('showSel').innerHTML=options.map(n=>`<option value="${html(n)}">${html(n)}</option>`).join('');
+  $('showSel').value=shown;
+}
+
+function experiment(){
+  const parameters={...last.params};
+  if(D.provision){parameters.n_school=D.provision.school.norm;parameters.n_kinder=D.provision.kindergarten.norm;}
+  return {город:D.name, кварталы:last.territory, набор:$('scenarioMode').value,
+    КИТ:last.kit, источник_КИТ:last.kitSrc, параметры:parameters, сценарии:SCN,
+    происхождение_сценариев:$('scenarioMode').value==='paired'?D.scenario_origins:undefined,
+    школы_и_сады:D.provision?'оценка по BlocksNet «как есть»':'запасной расчёт 4.7.3',
+    ограничение_набора_м:D.clip||0};
+}
+function save(blob,suffix){
+  const a=document.createElement('a'),url=URL.createObjectURL(blob);
+  a.href=url;a.download=`${D.code||'эксперимент'}_${suffix}`;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function saveCsv(id,suffix){
+  if(!last)return;
+  const rows=Array.from($(id).rows,row=>Array.from(row.cells,cell=>cell.textContent));
+  const ex=experiment(),names=Object.keys(SCN),width=rows[0].length;
+  rows.push([],['Параметры эксперимента'],['Город',ex.город],['Кварталы',ex.кварталы.join(', ')],
+    ['Набор сценариев',ex.набор==='paired'?'Эмпирические и экспериментальные':'Стандартный'],
+    ['КИТ',ex.КИТ],['Источник КИТ',ex.источник_КИТ],['Школы и сады',ex.школы_и_сады],
+    ['Ограничение набора, м',ex.ограничение_набора_м],
+    ...Object.entries(ex.параметры),...functionGroups.map(g=>[`Доля ${g}, %`,'',...names.map(n=>SCN[n][g])]));
+  const cell=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const text=rows.map(row=>Array.from({length:width},(_,i)=>cell(row[i])).join(';')).join('\r\n');
+  save(new Blob(['\uFEFF',text],{type:'text/csv;charset=utf-8'}),suffix);
+}
+function saveGeojson(){
+  if(!last||!D.blocks_crs)return;
+  const surrounding=new Set(last.E);
+  const features=B.map((b,i)=>({type:'Feature',geometry:{type:'MultiPolygon',coordinates:b.geo},properties:{
+    block_id:b.id,zone:b.zc,area:b.a,pop:b.pop,jobs:b.j,
+    есть_К:!!b.K,есть_ОД:!!b.OD,есть_П:!!b.P,cap_school:b.sc,cap_kinder:b.kg,
+    территория:sel.has(b.id),окружение:surrounding.has(i),
+    ...Object.fromEntries(Object.keys(SCN).map(name=>[`доступ ${name}`,last.eff[name][i]||0]))}}));
+  const geo={type:'FeatureCollection',crs:{type:'name',properties:{name:D.blocks_crs}},
+    эксперимент:experiment(),features};
+  save(new Blob([JSON.stringify(geo)],{type:'application/geo+json'}),'кварталы.geojson');
+}
+function savePng(){
+  if(!last)return;
+  const shown=$('showSel').value,code=D.code;
+  cv.toBlob(blob=>{if(blob&&D?.code===code)save(blob,`карта_${shown.replace(/[<>:"/\\|?*]/g,'_')}.png`);},'image/png');
 }
 
 // ---------- карта
@@ -350,7 +448,8 @@ function fit(){const r=cv.getBoundingClientRect();dpr=window.devicePixelRatio||1
 const X=x=>view.ox+view.s*x,Y=y=>view.oy-view.s*y;
 function path(b){ctx.beginPath();for(const p of b.g)for(const r of p){r.forEach((q,i)=>i?ctx.lineTo(X(q[0]),Y(q[1])):ctx.moveTo(X(q[0]),Y(q[1])));ctx.closePath();}}
 function draw(){
-  ctx.setTransform(dpr,0,0,dpr,0,0);const r=cv.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);
+  ctx.setTransform(dpr,0,0,dpr,0,0);const r=cv.getBoundingClientRect();
+  ctx.fillStyle='#fbfaf8';ctx.fillRect(0,0,r.width,r.height);
   const eff=last?last.eff[$('showSel').value]||{}:{};const Es=last?new Set(last.E):new Set();
   for(let i=0;i<B.length;i++){const b=B[i];path(b);
     let c=b.z==='П'?'#c9c3bb':b.z==='ОД'?'#c7d9ef':b.pop>0?'#f2d7b6':'#ece9e4';
@@ -370,7 +469,7 @@ cv.addEventListener('mousemove',e=>{
   if(!D)return;const i=pick(e),t=$('tip');
   if(i<0){t.style.display='none';return;}
   const b=B[i],fn=[b.K?'К':'',b.OD?'ОД':'',b.P?'П':''].filter(Boolean).join(', ')||'нет';
-  t.innerHTML=`Квартал ${b.id}${b.zc?' · '+b.zc:''}<br>жителей ${fmt(b.pop)} · рабочих мест ${fmt(b.j)} (А: ${fmt(b.jA)})<br>функции: ${fn} · школы ${fmt(b.sc)} · сады ${fmt(b.kg)}`;
+  t.innerHTML=`Квартал ${html(b.id)}${b.zc?' · '+html(b.zc):''}<br>жителей ${fmt(b.pop)} · рабочих мест ${fmt(b.j)} (А: ${fmt(b.jA)})<br>функции: ${fn} · школы ${fmt(b.sc)} · сады ${fmt(b.kg)}`;
   const r=cv.getBoundingClientRect();t.style.display='block';t.style.left=Math.min(e.clientX-r.left+12,r.width-260)+'px';t.style.top=(e.clientY-r.top+12)+'px';});
 cv.addEventListener('mouseleave',()=>$('tip').style.display='none');
 cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top,k=Math.exp(-e.deltaY*0.0015);
@@ -379,11 +478,19 @@ window.addEventListener('resize',()=>{if(B.length){fit();draw();}});
 
 // ---------- загрузка: пример (рядом с этой страницей, папка данные/) или свой файл
 function use(data){
-  if(data.rules!=='v5'||!data.blocks){$('res').innerHTML='<tr><td>Это не файл для страницы правил v5. Создайте его командой: python -m mixuse page configs/&lt;код&gt;.yaml</td></tr>';return;}
-  if(!data.params||typeof data.params.city_share!=='number'){$('res').innerHTML='<tr><td>Файл составлен прежней версией программы (нет порога сравнения с городом). Создайте его заново: python -m mixuse page configs/&lt;код&gt;.yaml или шаг 9 ноутбука.</td></tr>';return;}
-  D=data;B=D.blocks;B.forEach(prep);sel=new Set(D.territory);
-  SCN0=JSON.parse(JSON.stringify(D.scenarios));SCN=JSON.parse(JSON.stringify(SCN0));renderShares();
-  $('spRow').innerHTML=Object.entries(D.sp42).map(([k,[n,v]])=>`<option value="${k}">${n} — ${fmt(v,1)}</option>`).join('');
+  if(data?.rules!=='v5'||!data.blocks?.length||!data.scenarios){resetResults('Это не файл для страницы правил v5. Создайте его командой python -m mixuse page.');return;}
+  if(typeof data.params?.city_share!=='number'){resetResults('Файл составлен прежней версией программы. Создайте его заново командой python -m mixuse page.');return;}
+  const reserved=['Как есть','_source','_warnings','__proto__'];
+  if([data.scenarios,data.paired_scenarios||{}].some(set=>Object.keys(set).some(name=>reserved.includes(name)))){
+    resetResults('Файл содержит зарезервированное название сценария.');return;
+  }
+  D=data;B=D.blocks;B.forEach(prep);
+  $('datasetNote').textContent=D.name+(D.clip?` · фрагмент набора, радиус выгрузки ${fmt(D.clip)} м. Окружение считается по загруженным кварталам.`:'');
+  const ids=new Set(B.map(b=>b.id));sel=new Set((D.territory||[]).filter(id=>ids.has(id)));
+  $('pairedOption').disabled=!D.paired_scenarios;
+  if(!D.paired_scenarios)$('scenarioMode').value='standard';
+  setScenarios();
+  $('spRow').innerHTML=Object.entries(D.sp42).map(([k,[n,v]])=>`<option value="${html(k)}">${html(n)} — ${fmt(v,1)}</option>`).join('');
   if(D.params.kit!=null){$('kitMode').value='own';$('kit').value=D.params.kit;}
   else{$('kitMode').value='sp';$('spRow').value=D.params.kit_sp_row||'zh_low_mid';}
   $('R').value=D.params.R;$('r').value=D.params.r;$('ns').value=D.params.n_school;$('nk').value=D.params.n_kinder;
@@ -396,17 +503,48 @@ function use(data){
 }
 async function load(code){
   if(!code)return;
-  if(!cache[code]){$('res').innerHTML='<tr><td>Загрузка данных…</td></tr>';
-    try{const r=await fetch('данные/'+code+'.json');cache[code]=await r.json();}
-    catch(e){$('res').innerHTML='<tr><td>Не удалось открыть пример: браузер не даёт странице читать файлы с диска. Загрузите файл кнопкой «свой файл» (страница/данные/'+code+'.json).</td></tr>';return;}}
-  use(cache[code]);
+  const request=startLoad();
+  try{
+    if(!cache[code]){
+      const response=await fetch(`данные/${encodeURIComponent(code)}.json`);
+      if(!response.ok)throw new Error(String(response.status));
+      cache[code]=await response.json();
+    }
+    if(request===requestId)use(cache[code]);
+  }catch(e){if(request===requestId)resetResults(`Не удалось открыть пример. Запустите страницу через локальный сервер или загрузите файл «страница/данные/${code}.json» кнопкой «свой файл».`);}
+}
+function startLoad(){
+  D=null;B=[];sel.clear();$('tsel').textContent='—';$('blockIds').value='';$('selectionError').textContent='';
+  $('datasetNote').textContent='';$('scenarioNote').textContent='';$('normsNote').textContent='';$('provNote').textContent='';
+  $('shares').innerHTML='';$('showSel').innerHTML='';$('pairedOption').disabled=true;
+  resetResults('Загрузка данных…');return ++requestId;
+}
+function selectById(){
+  if(!D)return;
+  const byId=new Map(B.map(b=>[String(b.id),b.id]));
+  const tokens=$('blockIds').value.trim().split(/[\s,;]+/).filter(Boolean);
+  const unknown=tokens.filter(id=>!byId.has(id));
+  if(unknown.length){$('selectionError').textContent=`Кварталы отсутствуют в загруженном наборе: ${unknown.join(', ')}.`;return;}
+  sel=new Set(tokens.map(id=>byId.get(id)));compute();
 }
 $('city').onchange=e=>load(e.target.value);
-$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{use(JSON.parse(rd.result));}catch(err){$('res').innerHTML='<tr><td>Файл не прочитан: '+err.message+'</td></tr>';}};rd.readAsText(f,'utf-8');};
-$('preset').onclick=()=>{if(D){sel=new Set(D.territory);compute();}};
+$('file').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  e.target.value='';$('city').value='';const request=startLoad();
+  try{const data=JSON.parse(await f.text());if(request===requestId)use(data);}
+  catch(err){if(request===requestId)resetResults('Файл не прочитан: '+err.message);}
+};
+$('preset').onclick=()=>{if(D){const allowed=new Set(B.map(b=>b.id));sel=new Set((D.territory||[]).filter(id=>allowed.has(id)));compute();}};
 $('clear').onclick=()=>{sel.clear();compute();};
+$('selectIds').onclick=selectById;
+$('blockIds').onkeydown=e=>{if(e.key==='Enter')selectById();};
+$('scenarioMode').onchange=()=>{if(D){setScenarios();compute();}};
 $('run').onclick=compute;['kit','R','r','ns','nk','kitMode','spRow'].forEach(k=>$(k).onchange=compute);
 $('showSel').onchange=draw;
+$('csvShort').onclick=()=>saveCsv('res','сравнение_вариантов.csv');
+$('csvFull').onclick=()=>saveCsv('resFull','сравнение_подробно.csv');
+$('geojson').onclick=saveGeojson;
+$('png').onclick=savePng;
 </script>
 </body>
 </html>
