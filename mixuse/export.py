@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from .walk_access import DEFAULT_PREPARED_MINUTES, DEFAULT_WALK_MINUTES, load_walk_access
+from .employment import JOB_GROUPS, employment_stats
 
 
 def out_path(out_dir, code, suffix):
@@ -44,15 +45,36 @@ def _blocks_crs(city):
 
 def blocks_geojson(city, path, det=None, SCN=None):
     """Слой кварталов для QGIS в исходной системе координат кварталов.
-    Если передано сравнение — поля «территория», «окружение», «доступ <вариант>» (+1 появились, −1 пропали)."""
+    Если передано сравнение, добавляет занятость и доступность по сценариям."""
+    table = city['table']
+    employment = city.get('employment')
     inT = set(det['T']) if det else set(); inE = set(det['E'].tolist()) if det else set()
+    territory_area = table.area.iloc[det['T']].sum() if det else 0
+    values = det.get('values', {}) if det else {}
+    scenarios = SCN if SCN is not None else [name for name in values if name != 'Как есть']
     feats = []
-    for k, row in city['table'].iterrows():
+    for k, row in table.iterrows():
         props = {c: (None if pd.isna(row[c]) else (bool(row[c]) if isinstance(row[c], (bool, np.bool_)) else (row[c] if isinstance(row[c], str) else float(row[c]))))
                  for c in ['block_id', 'zone', 'area', 'pop', 'jobs', 'есть_К', 'есть_ОД', 'есть_П', 'cap_school', 'cap_kinder']}
+        groups = dict(zip(JOB_GROUPS, employment[k, :, 0].tolist())) if employment is not None else {}
+        other_jobs = max(0.0, props['jobs'] - sum(groups.values())) if groups else None
+        props.update({f'jobs_{g}': groups.get(g) for g in JOB_GROUPS})
+        props['jobs_прочие'] = other_jobs
         if det:
-            props['территория'] = k in inT; props['окружение'] = k in inE
-            for s in SCN:
+            selected = k in inT
+            share = float(row['area'] / territory_area) if selected and territory_area > 0 else 0.0
+            props['территория'] = selected; props['окружение'] = k in inE
+            for s in scenarios:
+                if s in values:
+                    result = values[s]
+                    jobs = float(result['J']) * share if selected else props['jobs']
+                    props[f'рабочие места {s}'] = jobs
+                    props[f'изменение рабочих мест {s}'] = jobs - props['jobs']
+                    projected = ({g: float(j) * share for g, j in result.get('jobs_by_function', {}).items()}
+                                 if selected else groups)
+                    for group in JOB_GROUPS:
+                        props[f'занятость_{group} {s}'] = projected.get(group)
+                    props[f'занятость_прочие {s}'] = 0.0 if selected else other_jobs
                 props['доступ ' + s] = det['effect'][s].get(k, 0)
                 for group, changes in det.get('effect_by_function', {}).get(s, {}).items():
                     props[f'изменение доступа {group} {s}'] = changes.get(k, 0)
@@ -61,6 +83,9 @@ def blocks_geojson(city, path, det=None, SCN=None):
                   'features': feats}
     if det and 'access_method' in det:
         collection['способ расчёта доступа к К и ОД'] = det['access_method']
+    if det and 'jobs_method' in det:
+        collection['метод расчёта рабочих мест'] = det['jobs_method']
+        collection['распределение рабочих мест'] = 'пропорционально площади кварталов территории'
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(collection, f, ensure_ascii=False)
     return path
@@ -154,8 +179,10 @@ def web_json_v5(city, cfg, path, pdat=None, clip=None, *, walk_minutes=DEFAULT_W
     totals — по всему набору)."""
     from .groups import zone_group
     from .params import SP42_B1, SCENARIO_ORIGINS, paired_scenarios
+    from .presentation import METRIC_HELP, explanation_parameters
     t = city['table']
     P, rules = cfg['params'], cfg.get('zone_rules', [])
+    employment = city.get('employment')
     keep = np.arange(len(t))
     T_ids = [int(i) for i in cfg.get('territory') or []]
     if clip and T_ids:
@@ -179,19 +206,24 @@ def web_json_v5(city, cfg, path, pdat=None, clip=None, *, walk_minutes=DEFAULT_W
             'g': [[np.round(r, 2).tolist() for r in p] for p in city['polys'][k]],
             'geo': _geom(city['orig'][k])['coordinates'],
         })
+        if employment is not None:
+            blocks[-1]['employment'] = employment[k].tolist()
     from .compare import CITY_SHARE
     params = {k: P.get(k) for k in ('kit', 'kit_source', 'kit_sp_row', 'R', 'r', 'q', 'k_liv', 'a_К', 'a_ОД', 'a_П',
-                                    'n_school', 'n_kinder', 'housing_note')}
+                                    'n_school', 'n_kinder', 'housing_note', 'jobs_method')}
     params['city_share'] = CITY_SHARE        # порог сравнения с городом, % (18.2а): страница берёт его отсюда, своего числа нет
     web = {'format': 'konstruktor-smeshannosti', 'format_version': 2, 'rules': 'v5',
            'name': cfg.get('title') or cfg['name'], 'code': cfg['name'], 'territory': T_ids,
            'totals': {'pop': float(t['pop'].sum()), 'jobs': float(t['jobs'].sum()), 'jobsA': float(t['jobs_A'].sum())},
            'clip': float(clip or 0), 'params': params, 'scenarios': cfg['scenarios'],
            'paired_scenarios': paired_scenarios(), 'scenario_origins': SCENARIO_ORIGINS,
+           'total_blocks': len(t), 'explanation': {'metrics': METRIC_HELP, 'parameters': explanation_parameters(cfg)},
            'blocks_crs': _blocks_crs(city),
            'sp42': {k: [n, v] for k, (n, v) in SP42_B1.items()},
            'blocks': blocks,
            'pts': {'metro': np.round(city['pts']['метро'], 2).tolist(), 'stop': np.round(city['pts']['остановка'], 2).tolist()}}
+    if employment is not None:
+        web['employment'] = employment_stats(t.area.to_numpy(), employment).tolist()
     if walk_max_minutes is None:
         walk_max_minutes = max(DEFAULT_PREPARED_MINUTES, walk_minutes)
     walk, reason = load_walk_access(cfg, t['block_id'], walk_minutes, walk_max_minutes, keep)

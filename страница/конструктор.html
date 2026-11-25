@@ -1,148 +1,452 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-type="software" data-motion>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f5f3ee">
+<meta name="page-type" content="software">
+<meta name="site-kind" content="software">
+<meta name="description" content="Выберите кварталы на карте и сравните сценарии застройки по рабочим местам, жилью и доступности услуг.">
 <title>Конструктор смешанности</title>
 <style>
-:root{color-scheme:light;--bg:#f6f5f2;--card:#fff;--ink:#1f2328;--mut:#6b7078;--line:#e2e0db;--acc:#6b3fa0;--gain:#2e8b57;--loss:#d9822b}
-*{box-sizing:border-box}
-body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
-header{padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card);display:flex;gap:18px;align-items:center;flex-wrap:wrap}
-h1{font-size:17px;margin:0;font-weight:600}
-.sub{color:var(--mut);font-size:12.5px}
-main{display:grid;grid-template-columns:minmax(380px,1fr) minmax(520px,1.25fr);gap:14px;padding:14px}
-@media(max-width:1100px){main{grid-template-columns:minmax(0,1fr)}}
-.card{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-select,input,button{font:inherit}
-select,input[type=number]{padding:4px 6px;border:1px solid #c9c6c0;border-radius:6px;background:#fff;color:#1f2328}
-select{padding-right:22px;font-weight:500}
-input[type=number]{width:64px}
-button{padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:#1f2328}
-button:hover{border-color:#bbb}
-button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
-#mapwrap{position:relative;height:560px;border-radius:8px;overflow:hidden;background:#fbfaf8;border:1px solid var(--line);margin-top:10px}
-canvas{display:block;width:100%;height:100%;cursor:crosshair}
-#tip{position:absolute;pointer-events:none;background:rgba(31,35,40,.92);color:#fff;font-size:12px;padding:6px 8px;border-radius:6px;display:none;white-space:nowrap}
-.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-top:8px}
-.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid rgba(0,0,0,.12)}
-table{border-collapse:collapse;width:100%;font-size:12.5px}
-th,td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
-th:first-child,td:first-child{text-align:left;white-space:normal}
-thead th{font-weight:600;background:#faf9f7;position:sticky;top:0}
-tr.sec td{background:#faf9f7;font-weight:600;color:var(--mut);text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em}
-td.pos{color:var(--gain)} td.neg{color:var(--loss)}
-.shares input{width:46px}
-.info{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:10px 0}
-.info div{background:#faf9f7;border-radius:8px;padding:6px 8px}
-.info b{display:block;font-size:15px}
-.info span{color:var(--mut);font-size:11.5px}
-.warn{background:#fff6e8;border:1px solid #f1d29f;color:#7a4b00;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:12.5px;display:none}
-.note{color:var(--mut);font-size:12px;margin-top:8px}
-.tabw{overflow-x:auto}
-details summary{cursor:pointer;color:var(--mut);font-size:12.5px}
-.concl td{white-space:normal;text-align:left;font-size:12.5px;line-height:1.35;vertical-align:top;min-width:150px}
-.concl td:first-child{font-weight:600}
-#kit:disabled{background:#f2f1ee;color:#6b7078}
-#drop{border:1px dashed #c9c6c0;border-radius:8px;padding:6px 10px;color:var(--mut);font-size:12.5px}
+:root {
+  color-scheme: light;
+  --bg: #f5f3ee;
+  --paper: #fffefa;
+  --soft: #f7f5f0;
+  --ink: #252620;
+  --muted: #515348;
+  --line: #dedbd2;
+  --control: #beb9ae;
+  --accent: #91452f;
+  --accent-hover: #783623;
+  --accent-soft: #f4e7df;
+  --gain: #246648;
+  --loss: #a52f2b;
+  --radius: 10px;
+  --gutter: clamp(16px, 3.4vw, 52px);
+  --map-ground: #f8f6ef;
+  --map-selected: #b5664b;
+  --map-edge: #333a34;
+  --map-housing: #e9d4b2;
+  --map-industry: #c8c4b9;
+  --map-business: #c3d4dc;
+  --map-other: #e9e8e0;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--bg);
+  font: 15px/1.5 system-ui, "Segoe UI", Arial, sans-serif;
+}
+h1, h2, h3, p { margin: 0; }
+h1 {
+  font-size: clamp(30px, 4vw, 48px);
+  line-height: 1.1;
+  letter-spacing: -.045em;
+  font-weight: 680;
+}
+h2 { font-size: 23px; line-height: 1.25; font-weight: 670; letter-spacing: -.025em; }
+h3 { font-size: 16px; font-weight: 650; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.wrap { width: min(100%, 1504px); margin-inline: auto; padding-inline: var(--gutter); }
+.skip-link { position: absolute; z-index: 2; top: 8px; left: var(--gutter); padding: 12px; background: var(--paper); color: var(--ink); }
+.skip-link:not(:focus) { clip-path: inset(50%); }
+.masthead { background: var(--paper); border-bottom: 1px solid var(--line); }
+.masthead .wrap { min-height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 12px 30px; }
+.brand { display: inline-flex; align-items: center; gap: 11px; font-size: 14px; font-weight: 690; }
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: white;
+}
+.brand-mark::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(white, white) 0 0 / 6px 14px,
+    linear-gradient(white, white) 8px 0 / 6px 6px,
+    linear-gradient(white, white) 8px 8px / 6px 6px;
+  background-repeat: no-repeat;
+}
+.masthead nav { display: flex; gap: clamp(12px, 2.4vw, 32px); }
+.masthead a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 580;
+  text-decoration: underline transparent;
+  text-underline-offset: 5px;
+  transition: color .15s ease, text-decoration-color .15s ease;
+}
+.masthead a:hover { color: var(--accent); text-decoration-color: currentColor; }
+main { padding-block: 28px 52px; }
+section[id], aside[id] { scroll-margin-top: 16px; }
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 330px);
+  align-items: end;
+  gap: 20px 32px;
+  margin-bottom: 24px;
+}
+.intro p { max-width: 57ch; margin-top: 10px; color: var(--muted); font-size: 16px; }
+.data-source {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(300px, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+.card { min-width: 0; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); }
+.panel-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px 18px; }
+.panel-head > div { min-width: 0; }
+.panel-head p { margin-top: 5px; }
+.sub, .note { color: var(--muted); font-size: 13px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.field { display: grid; align-content: start; gap: 5px; min-width: 0; }
+.field > span:first-child { font-size: 13px; font-weight: 620; }
+select, input, button { font: inherit; }
+select, input:not([type=file]), button {
+  min-height: 40px;
+  border: 1px solid var(--control);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--paper);
+}
+select, input:not([type=file]) { width: 100%; padding: 7px 9px; }
+select { text-overflow: ellipsis; }
+button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  font-size: 13px;
+  font-weight: 620;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled):hover { background: var(--soft); border-color: var(--muted); transform: translateY(-1px); }
+}
+button:not(:disabled):active { transform: translateY(1px) scale(.985); }
+button.pri { background: var(--accent); color: #fff; border-color: var(--accent); }
+button.pri:not(:disabled):hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+button:disabled, input:disabled { color: var(--muted); background: var(--soft); cursor: default; opacity: .72; }
+#drop { white-space: nowrap; }
+.map-panel { padding: 20px; }
+.map-panel .panel-head { align-items: baseline; gap: 5px 14px; }
+.map-panel .panel-head p { flex-basis: 100%; margin-top: 0; }
+.dataset { color: var(--accent); font-size: 13px; font-weight: 650; }
+.dataset:empty { display: none; }
+.coverage, .warn {
+  padding: 11px 13px;
+  margin-top: 12px;
+  background: #fbf0e0;
+  border-left: 3px solid #aa6e2e;
+  color: #684411;
+  font-size: 13px;
+}
+.warn { display: none; }
+.map-tools { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 12px 16px; margin-block: 15px 12px; }
+.map-filters { flex: 1 1 280px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: end; gap: 8px; }
+.map-actions { align-self: end; }
+#mapwrap { position: relative; height: clamp(370px, 45vw, 510px); overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: var(--map-ground); }
+canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+.map-zoom { position: absolute; top: 10px; right: 10px; display: grid; gap: 6px; }
+.map-zoom button { width: 44px; min-height: 44px; padding: 0; font-size: 22px; font-weight: 550; line-height: 1; }
+.map-empty { position: absolute; inset: 0; display: grid; place-content: center; padding: 24px; text-align: center; background: var(--map-ground); }
+.map-empty p { max-width: 29ch; margin: 6px auto 0; }
+#tip {
+  position: absolute;
+  z-index: 1;
+  display: none;
+  width: max-content;
+  max-width: min(320px, 95%);
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #292b24;
+  color: #fff;
+  font-size: 12px;
+  pointer-events: none;
+}
+.legend { display: flex; flex-wrap: wrap; gap: 5px 14px; margin-top: 12px; color: var(--muted); font-size: 12px; }
+.sw { display: inline-block; width: 12px; height: 12px; margin-right: 5px; border: 1px solid #0002; border-radius: 2px; vertical-align: -1px; background: var(--swatch); }
+.sw-outline { border: 2px solid var(--map-edge); }
+.map-help { margin-top: 8px; }
+.map-result { margin-top: 8px; padding: 9px 11px; background: var(--soft); border-radius: 6px; font-size: 13px; }
+.selection { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.selection-head { display: flex; align-items: baseline; gap: 5px 10px; flex-wrap: wrap; }
+#tsel { overflow-wrap: anywhere; }
+.selection-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; margin-top: 10px; }
+.block-field { min-width: 135px; flex: 1 1 165px; }
+#selectionError { color: var(--loss); margin-top: 4px; }
+#selectionError:empty { display: none; }
+.settings { padding: 20px; }
+.setting-group { margin-top: 14px; display: grid; gap: 8px; min-width: 0; }
+.setting-group > p:empty { display: none; }
+.setting-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.setting-divider { padding-top: 14px; border-top: 1px solid var(--line); }
+.run { width: 100%; min-height: 44px; }
+.results { margin-top: 20px; padding: 20px; }
+.info { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 165px), 1fr)); gap: 12px; margin-block: 16px; }
+.info:empty { display: none; }
+.info div { background: var(--soft); border-radius: 6px; padding: 10px 12px; }
+.info b { display: block; font-size: 18px; line-height: 1.25; font-weight: 670; overflow-wrap: anywhere; }
+.info span { color: var(--muted); font-size: 12px; }
+.table-hint { display: none; }
+.tabw { max-width: 100%; overflow-x: auto; }
+.results > .tabw { margin-top: 16px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; white-space: normal; }
+thead th, tr.sec td { background: var(--soft); font-weight: 650; }
+tr.sec td { text-align: left; color: var(--muted); }
+#res :is(th, td):first-child, #resFull :is(th, td):first-child { min-width: 165px; max-width: 280px; }
+#res :is(th, td), #resFull :is(th, td) { white-space: normal; }
+#res td:only-child:not([colspan]) { color: var(--muted); }
+.pos { color: var(--gain); }
+.neg { color: var(--loss); }
+.concl td { min-width: 155px; text-align: left; white-space: normal; vertical-align: top; }
+.concl td:first-child { font-weight: 650; }
+details { min-width: 0; border-top: 1px solid var(--line); }
+summary { min-height: 44px; padding: 11px 2px; cursor: pointer; font-size: 14px; font-weight: 620; }
+summary:hover { color: var(--accent); }
+details[open] { padding-bottom: 12px; }
+.result-details { margin-top: 15px; }
+.pair-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 680px; gap: 8px; margin-bottom: 8px; }
+details > .sub + .tabw { margin-top: 8px; }
+.exports { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.exports h3 { margin-bottom: 8px; }
+.shares input { min-width: 64px; }
+.origin-emp { color: #1f624b; background: #e7f1ea; }
+.origin-exp { color: #793f2d; background: var(--accent-soft); }
+.origin-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-top: 4px; }
+.share-chart { display: flex; min-width: 132px; min-height: 20px; overflow: hidden; border-radius: 3px; background: var(--soft); }
+.share-chart span { display: block; text-align: center; color: #fff; font-size: 12px; overflow: hidden; }
+.share-key { margin: 4px 0 10px; }
+.explain-list { display: grid; gap: 10px; padding: 0; list-style: none; }
+.explain-list code { display: block; margin: 3px 0; overflow-wrap: anywhere; }
+#pairResults th:first-child { min-width: 165px; }
+#parameterHelp td { text-align: left; white-space: normal; }
+.note:not(:empty) { margin-top: 10px; }
+@media (prefers-reduced-motion: no-preference) {
+  [data-enter] > div:first-child { animation: intro-in .46s cubic-bezier(.22, 1, .36, 1) both; }
+  @keyframes intro-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+  button:not(:disabled):is(:hover, :active) { transform: none; }
+}
+@media (max-width: 900px) {
+  .workspace { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 680px) {
+  .masthead .wrap { flex-wrap: wrap; padding-block: 8px; gap: 2px 12px; }
+  .masthead nav { gap: 22px; }
+  main { padding-block: 23px 32px; }
+  .intro { grid-template-columns: minmax(0, 1fr); margin-bottom: 16px; gap: 16px; }
+  .workspace { gap: 12px; }
+  .map-panel, .settings, .results { padding: 14px; }
+  .results { margin-top: 12px; }
+  .info { grid-template-columns: repeat(auto-fit, minmax(min(100%, 138px), 1fr)); gap: 8px; }
+  .info:not(:empty) + .table-hint { display: block; }
+  .map-tools { gap: 8px; }
+  .map-actions { width: 100%; }
+  .map-actions > button { flex: 1 1 auto; }
+  #mapwrap { height: clamp(300px, 94vw, 440px); }
+  select, input:not([type=file]), button { min-height: 44px; }
+  select, input:not([type=file]) { font-size: 16px; }
+}
+@media (max-width: 360px) {
+  .map-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pair-controls { grid-template-columns: minmax(0, 1fr); }
+}
 </style>
 </head>
 <body>
-<header>
-  <div><h1>Конструктор смешанности</h1><div class="sub">Сравнение сочетаний функций на территории реорганизации. Правила v5: рабочие места по категориям зданий, пять вариантов, КИТ из ПЗЗ или СП 42.13330.2016.</div></div>
-  <div class="row" style="margin-left:auto">
-    <label>Пример <select id="city">
-      <option value="">— выберите —</option>
-      <option value="vysotsk">Высоцк</option>
-      <option value="gatchina_layers">Гатчина</option>
-      <option value="spb_full">Санкт-Петербург (фрагмент)</option>
-    </select></label>
-    <label id="drop">или свой файл <code>&lt;код&gt;_для_страницы.json</code>: <input type="file" id="file" accept=".json"></label>
+<a class="skip-link" href="#main">К рабочей области</a>
+<header class="masthead">
+  <div class="wrap">
+    <span class="brand"><span class="brand-mark" aria-hidden="true"></span>Смешанность функций</span>
+    <nav aria-label="Разделы конструктора">
+      <a href="#territory">Карта</a>
+      <a href="#settings">Параметры</a>
+      <a href="#results">Результаты</a>
+    </nav>
   </div>
 </header>
-<main>
-<section class="card">
-  <div id="datasetNote" class="sub"></div>
-  <div class="row">
-    <b>Территория:</b> <span id="tsel" class="sub">—</span>
-    <button id="preset">Территория из расчёта</button>
-    <button id="clear">Очистить</button>
-  </div>
-  <div class="row" style="margin-top:6px">
-    <label>Номера кварталов <input id="blockIds" type="text" placeholder="305, 309"></label>
-    <button id="selectIds">Выбрать</button>
-    <span id="selectionError" class="sub" role="status"></span>
-  </div>
-  <div class="sub" style="margin-top:6px">Щелчок по кварталу добавляет его в территорию или убирает. Колесо — масштаб, перетаскивание — сдвиг.</div>
-  <div id="mapwrap"><canvas id="map"></canvas><div id="tip"></div></div>
-  <div class="legend">
-    <span><i class="sw" style="background:#6b3fa0"></i>территория</span>
-    <span><i class="sw" style="background:#fff;border:2px solid #1f2328"></i>окружение (центр ≤ R)</span>
-    <span><i class="sw" style="background:#f2d7b6"></i>жилой квартал</span>
-    <span><i class="sw" style="background:#c9c3bb"></i>производственная зона</span>
-    <span><i class="sw" style="background:#c7d9ef"></i>общественно-деловая зона</span>
-    <span><i class="sw" style="background:#2e8b57"></i>получают доступ</span>
-    <span><i class="sw" style="background:#d9822b"></i>теряют доступ</span>
-  </div>
-  <div class="row" style="margin-top:8px">
-    <label>Окраска карты по варианту <select id="showSel"></select></label>
-    <label>Изменение доступа <select id="mapFunction"><option value="">К и ОД вместе</option><option>К</option><option>ОД</option></select></label>
-  </div>
-</section>
 
-<section class="card">
-  <div class="row">
-    <label>КИТ варианта <select id="kitMode">
-      <option value="own">своё значение (ПЗЗ, ППТ)</option>
-      <option value="sp">по СП 42.13330.2016, табл. Б.1</option>
-      <option value="env">как в окружении (по данным, для сравнения)</option>
-      <option value="spb">1,4 — ПЗЗ СПб (справочно)</option>
-    </select></label>
-    <select id="spRow" style="display:none"></select>
-    <input id="kit" type="number" step="0.1" min="0.05">
-    <span id="kitSrc" class="sub"></span>
+<main id="main" class="wrap" tabindex="-1">
+  <section class="intro" aria-labelledby="title" data-enter>
+    <div>
+      <h1 id="title">Конструктор смешанности</h1>
+      <p>Сравните варианты застройки кварталов по числу жителей, рабочих мест и доступности услуг.</p>
+    </div>
+    <div class="data-source">
+      <label class="field"><span>Город из примеров</span>
+        <select id="city">
+          <option value="" selected disabled>Выберите город</option>
+          <option value="vysotsk">Высоцк</option>
+          <option value="gatchina_layers">Гатчина</option>
+          <option value="spb_full">Санкт-Петербург (фрагмент)</option>
+        </select>
+      </label>
+      <button id="drop" type="button">Загрузить JSON</button>
+      <input type="file" id="file" accept=".json" hidden>
+    </div>
+  </section>
+
+  <div class="workspace">
+    <section class="card map-panel" id="territory" aria-labelledby="map-title">
+      <div class="panel-head">
+        <h2 id="map-title">Карта кварталов</h2>
+        <div id="datasetNote" class="dataset" role="status"></div>
+        <p class="sub" id="mapHelp">Нажмите на квартал для выбора. Меняйте масштаб кнопками или колесом мыши.</p>
+      </div>
+      <div id="coverageNote" class="coverage" hidden></div>
+      <div class="map-tools">
+        <div class="map-filters">
+          <label class="field"><span>Сценарий на карте</span><select id="showSel"><option>Как есть</option></select></label>
+          <label class="field"><span>Изменение доступа</span><select id="mapFunction"><option value="">К и ОД</option><option>К</option><option>ОД</option></select></label>
+        </div>
+        <div class="row map-actions">
+          <button id="focusArea" type="button">Территория и окружение</button>
+          <button id="fitAll" type="button">Вся выгрузка</button>
+        </div>
+      </div>
+      <div id="mapwrap" class="app-frame" data-visual>
+        <canvas id="map" aria-label="Интерактивная карта кварталов" aria-describedby="mapHelp">Выберите кварталы по номерам в поле под картой.</canvas>
+        <div class="map-zoom" id="mapZoom" hidden>
+          <button id="zoomIn" type="button" aria-label="Приблизить карту">+</button>
+          <button id="zoomOut" type="button" aria-label="Отдалить карту">−</button>
+        </div>
+        <div id="mapEmpty" class="map-empty">
+          <div>
+            <h3>Откройте карту города</h3>
+            <p class="sub">Выберите город из списка или загрузите файл с кварталами.</p>
+          </div>
+        </div>
+        <div id="tip"></div>
+      </div>
+      <div class="legend" aria-label="Условные обозначения">
+        <span><i class="sw" style="--swatch:var(--map-selected)" aria-hidden="true"></i>Территория</span>
+        <span><i class="sw sw-outline" aria-hidden="true"></i>Окружение (центр ≤ R)</span>
+        <span><i class="sw" style="--swatch:var(--map-housing)" aria-hidden="true"></i>Жилой квартал</span>
+        <span><i class="sw" style="--swatch:var(--map-industry)" aria-hidden="true"></i>Производственная зона</span>
+        <span><i class="sw" style="--swatch:var(--map-business)" aria-hidden="true"></i>Общественно-деловая зона</span>
+        <span><i class="sw" style="--swatch:var(--gain)" aria-hidden="true"></i>+ Получили доступ</span>
+        <span><i class="sw" style="--swatch:var(--loss)" aria-hidden="true"></i>− Потеряли доступ</span>
+      </div>
+      <p class="sub map-help">К — торговля и услуги. ОД — общественно-деловые функции. Размер значка зависит от числа жителей с изменившимся доступом.</p>
+      <div id="territoryImpact" class="map-result" hidden></div>
+      <div id="mapStatus" class="map-result" role="status" hidden></div>
+      <div class="selection">
+        <div class="selection-head"><h3>Выбранные кварталы</h3><span id="tsel" class="sub">—</span></div>
+        <div class="selection-controls">
+          <label class="field block-field"><span>Номера кварталов</span><input id="blockIds" type="text" placeholder="305, 309"></label>
+          <button id="selectIds" type="button">Выбрать</button>
+          <button id="preset" type="button">Территория из расчёта</button>
+          <button id="clear" type="button">Очистить</button>
+        </div>
+        <div id="selectionError" class="sub" role="status"></div>
+      </div>
+    </section>
+
+    <aside class="card settings" id="settings" aria-labelledby="settings-title">
+      <h2 id="settings-title">Параметры расчёта</h2>
+      <div class="setting-group">
+        <label class="field"><span>Набор сценариев</span><select id="scenarioMode">
+          <option value="standard">Стандартный набор</option>
+          <option id="pairedOption" value="paired" disabled>2 эмпирических + 5 экспериментальных</option>
+        </select></label>
+        <p class="sub" id="scenarioNote"></p>
+        <label class="field"><span>Источник КИТ</span><select id="kitMode">
+          <option value="own">своё значение (ПЗЗ, ППТ)</option>
+          <option value="sp">по СП 42.13330.2016, табл. Б.1</option>
+          <option value="env">как в окружении (по данным, для сравнения)</option>
+          <option value="spb">ПЗЗ СПб (справочно)</option>
+        </select></label>
+        <label class="field" id="spField" hidden><span>Категория застройки по СП</span><select id="spRow"></select></label>
+        <label class="field"><span>КИТ варианта</span><input id="kit" type="number" step="0.1" min="0.05"></label>
+        <p id="kitSrc" class="sub"></p>
+      </div>
+      <div class="setting-group setting-divider">
+        <label class="field"><span>Доступ к К и ОД</span><select id="accessMode"><option value="geometry">По геометрическому расстоянию</option><option id="walkOption" value="walk" disabled>По пешеходной сети</option></select></label>
+        <div class="setting-pair">
+          <label class="field"><span>Окружение R, м</span><input id="R" type="number" step="50" min="100"></label>
+          <label class="field"><span>Доступ r, м</span><input id="r" type="number" step="50" min="100"></label>
+        </div>
+        <label class="field" id="walkThreshold" hidden><span>Порог ходьбы, мин</span><input id="walkMinutes" type="number" min="0" step="any" value="10"></label>
+        <p id="walkNote" class="sub"></p>
+        <div id="normsBox" class="setting-pair">
+          <label class="field"><span>Школы, мест на 1000</span><input id="ns" type="number" step="5" min="1"></label>
+          <label class="field"><span>Сады, мест на 1000</span><input id="nk" type="number" step="5" min="1"></label>
+        </div>
+        <button class="pri run" id="run" type="button">Рассчитать варианты</button>
+      </div>
+    </aside>
   </div>
-  <div class="row" style="margin-top:6px">
-    <label>Сценарии <select id="scenarioMode">
-      <option value="standard">Стандартный набор</option>
-      <option id="pairedOption" value="paired" disabled>2 эмпирических + 5 экспериментальных</option>
-    </select></label>
-    <label>R, м <input id="R" type="number" step="50" min="100"></label>
-    <label>r, м <input id="r" type="number" step="50" min="100"></label>
-    <span id="normsBox" class="row">
-      <label>Школы, мест на 1000 <input id="ns" type="number" step="5" min="1"></label>
-      <label>Сады <input id="nk" type="number" step="5" min="1"></label>
-    </span>
-    <button class="pri" id="run">Пересчитать</button>
-  </div>
-  <div class="row" style="margin-top:6px">
-    <label>Доступ к К и ОД <select id="accessMode"><option value="geometry">По геометрическому расстоянию</option><option id="walkOption" value="walk" disabled>По пешеходной сети</option></select></label>
-    <label id="walkThreshold" hidden>Порог ходьбы, мин <input id="walkMinutes" type="number" min="0" step="any" value="10"></label>
-    <span id="walkNote" class="sub"></span>
-  </div>
-  <div class="sub" id="normsNote" style="margin-top:4px"></div>
-  <div class="sub" id="scenarioNote" style="margin-top:4px"></div>
-  <details style="margin-top:8px"><summary>Доли вариантов, % поэтажной площади (можно менять)</summary>
-    <div class="tabw"><table class="shares" id="shares"></table></div>
-  </details>
-  <div id="warn" class="warn"></div>
-  <div class="info" id="info"></div>
-  <div class="tabw"><table id="res"><tr><td>Выберите пример или загрузите свой файл.</td></tr></table></div>
-  <details style="margin-top:10px"><summary>Подробно: все показатели</summary><div class="tabw"><table id="resFull"></table></div></details>
-  <div class="row" style="margin-top:10px">
-    <button id="csvShort" disabled>Краткая таблица CSV</button>
-    <button id="csvFull" disabled>Подробная таблица CSV</button>
-    <button id="geojson" disabled>Кварталы GeoJSON</button>
-    <button id="png" disabled>Карта PNG</button>
-  </div>
-  <div class="note">
-    F = площадь территории × КИТ; N = F·δЖ·k_liv ÷ q; J = F·(δК÷28 + δОД÷15 + δП÷69). Существующая застройка территории в вариантах заменяется полностью.
-    K окружения = (рабочие места окружения + J) ÷ (жители окружения + N); нижняя граница — только рабочие места категории А.
-    КИТ — один для всех вариантов: из ПЗЗ или проекта планировки; если его нет — предельный коэффициент плотности застройки квартала по СП 42.13330.2016, табл. Б.1; КИТ окружения по данным — только для сравнения.
-    <span id="provNote"></span>
-  </div>
-</section>
+
+  <section class="card results" id="results" aria-labelledby="results-title">
+    <div class="panel-head">
+      <div>
+        <h2 id="results-title">Сравнение вариантов</h2>
+      </div>
+    </div>
+    <div id="warn" class="warn" role="status"></div>
+    <div class="info" id="info"></div>
+    <p class="sub table-hint">Прокрутите таблицу вправо, чтобы увидеть остальные варианты.</p>
+    <div class="tabw" role="region" aria-label="Краткое сравнение" tabindex="0">
+      <table id="res"><tr><td>Выберите город из примеров или загрузите JSON.</td></tr></table>
+    </div>
+    <div class="result-details">
+      <details>
+        <summary>Все показатели</summary>
+        <div class="tabw" role="region" aria-label="Таблица всех показателей" tabindex="0"><table id="resFull"></table></div>
+      </details>
+      <details>
+        <summary>Сопоставить два сценария</summary>
+        <div class="pair-controls"><label class="field"><span>Первый сценарий</span><select id="pairA"></select></label><label class="field"><span>Второй сценарий</span><select id="pairB"></select></label></div>
+        <p class="sub">В скобках указано изменение относительно «Как есть». Изменение обеспеченности дано в процентных пунктах.</p>
+        <div class="tabw" role="region" aria-label="Таблица двух сценариев" tabindex="0"><table id="pairResults"></table></div>
+      </details>
+      <details>
+        <summary>Доли вариантов, % поэтажной площади</summary>
+        <div id="shareLegend" class="row share-key sub"></div>
+        <div class="tabw" role="region" aria-label="Таблица долей вариантов" tabindex="0"><table class="shares" id="shares"></table></div>
+      </details>
+      <details>
+        <summary>Как программа считает</summary>
+        <p class="sub" id="normsNote"></p>
+        <ul id="metricHelp" class="explain-list"></ul>
+        <div class="tabw" role="region" aria-label="Таблица параметров расчёта" tabindex="0"><table id="parameterHelp"></table></div>
+        <p id="provNote" class="note"></p>
+      </details>
+    </div>
+    <div class="exports">
+      <h3>Экспорт</h3>
+      <div class="row">
+        <button id="csvShort" type="button" disabled>Краткая таблица CSV</button>
+        <button id="csvFull" type="button" disabled>Подробная таблица CSV</button>
+        <button id="geojson" type="button" disabled>Кварталы GeoJSON</button>
+        <button id="png" type="button" disabled>Карта PNG</button>
+      </div>
+    </div>
+  </section>
 </main>
 <script>
 // ==== РАСЧЁТ (начало) — без обращения к странице; тот же расчёт, что в пакете mixuse (compare_v5, provision_estimate).
@@ -246,6 +550,41 @@ function walkNeighbors(D,B,origins,minutes){
   }));
 }
 
+const jobGroups=['К','ОД','П'];
+function employmentRates(D,B,T,E){
+  const stats=indices=>jobGroups.map((_,g)=>{
+    let count=0,area=0,jobs=0,known=0;
+    for(const i of indices){
+      const b=B[i],pair=b.employment?.[g];
+      if(b.a>0&&pair?.[0]>0){count++;area+=b.a;jobs+=pair[0];known+=pair[1];}
+    }
+    return [count,area,jobs,known];
+  });
+  const local=stats(E),territory=stats(T);
+  return jobGroups.map((_,g)=>{
+    const [count,area,jobs,known]=local[g];
+    const [refCount,refArea,refJobs,refKnown]=D.employment[g].map((v,i)=>v-local[g][i]-territory[g][i]);
+    const hasReference=refCount>0&&refArea>0;
+    const totalPrior=hasReference?refJobs/refArea:0,knownPrior=hasReference?refKnown/refArea:0;
+    if(!count)return [totalPrior,knownPrior,count,refCount];
+    const weight=hasReference?area/count:0;
+    return [(jobs+weight*totalPrior)/(area+weight),(known+weight*knownPrior)/(area+weight),count,refCount];
+  });
+}
+function employmentJobs(area,kit,shares,P,rates){
+  const capacity=area*kit*jobGroups.reduce((sum,g)=>sum+shares[g]/P['a_'+g],0);
+  if(!rates)return [capacity,capacity,null,jobGroups.map(g=>area*kit*(shares[g]/P['a_'+g]))];
+  let jobs=0,known=0;
+  const byFunction=jobGroups.map((group,g)=>{
+    const [density,knownDensity]=rates[g];
+    const contribution=area*shares[group]*Math.min(kit/P['a_'+group],density);
+    jobs+=contribution;
+    if(density>0)known+=contribution*knownDensity/density;
+    return contribution;
+  });
+  return [jobs,known,capacity,byFunction];
+}
+
 // Шаги 5–6 (compare_v5). T — номера строк кварталов территории; P — параметры; SCN — варианты; K — выбор КИТ.
 function calc(D,B,T,P,SCN,K){
   const n=B.length,inT=new Array(n).fill(false);for(const k of T)inT[k]=true;
@@ -254,6 +593,7 @@ function calc(D,B,T,P,SCN,K){
   const kk=chooseKit(D,B,E,K.mode,K.value,K.spRow),kit=kk.kit;
   const sum=(idx,f)=>idx.reduce((s,i)=>s+B[i][f],0);
   const S=sum(T,'a'),F=S*kit,popE=sum(E,'pop'),jobsE=sum(E,'j'),jobsEA=sum(E,'jA');
+  const rates=P.jobs_method==='local'&&D.employment?.length===jobGroups.length?employmentRates(D,B,T,E):null;
   const popA=D.totals.pop,jobsA=D.totals.jobs,popT0=sum(T,'pop'),jobsT0=sum(T,'j'),jobsT0A=sum(T,'jA');
   const near=new Map();
   for(const b of E){if(B[b].pop<=0)continue;const x=B[b].cx,y=B[b].cy,l=[];for(let k=0;k<n;k++){if(bbD(x,y,B[k])>P.r)continue;if(distPB(x,y,B[k])<=P.r)l.push(k);}near.set(b,l);}
@@ -265,10 +605,10 @@ function calc(D,B,T,P,SCN,K){
   const out={},eff={},effByFunction={};
   const area=T.map(k=>B[k].a),aT=area.reduce((s,v)=>s+v,0);
   for(const [name,sh] of [['Как есть',null],...Object.entries(SCN)]){
-    let N,J,JA,d=null,capS,capK;
+    let N,J,JA,J_capacity=null,jobsByFunction=null,d=null,capS,capK;
     if(!sh){N=popT0;J=jobsT0;JA=jobsT0A;capS=capSum([...E,...T],'sc');capK=capSum([...E,...T],'kg');}
     else{const s=sh['Ж']+sh['К']+sh['ОД']+sh['П'];d={'Ж':sh['Ж']/s,'К':sh['К']/s,'ОД':sh['ОД']/s,'П':sh['П']/s};
-      N=F*d['Ж']*P.k_liv/P.q;J=F*(d['К']/P['a_К']+d['ОД']/P['a_ОД']+d['П']/P['a_П']);JA=J;capS=capSum(E,'sc');capK=capSum(E,'kg');}
+      N=F*d['Ж']*P.k_liv/P.q;[J,JA,J_capacity,jobsByFunction]=employmentJobs(S,kit,d,P,rates);capS=capSum(E,'sc');capK=capSum(E,'kg');}
     const acc={},e={},changes={'К':{},'ОД':{}};
     if(d){for(const [g,f] of [['К','K'],['ОД','OD'],['П','P']]){let a=0,c=0;
       for(const [b,l] of near){
@@ -284,7 +624,7 @@ function calc(D,B,T,P,SCN,K){
     effByFunction[name]=changes;
     const nS=(popE+N)*P.n_school/1000,nK=(popE+N)*P.n_kinder/1000;
     const freeS=Math.max(0,capS-popE*P.n_school/1000),freeK=Math.max(0,capK-popE*P.n_kinder/1000);
-    const o={N,J,J_A:JA,d,dJ:d?J-jobsT0:null,acc,K:(jobsE+J)/(popE+N),KA:(jobsEA+JA)/(popE+N),Kall:(jobsA-jobsT0+J)/(popA-popT0+N),
+    const o={N,J,J_A:JA,J_capacity,jobsByFunction,d,dJ:d?J-jobsT0:null,acc,K:(jobsE+J)/(popE+N),KA:(jobsEA+JA)/(popE+N),Kall:(jobsA-jobsT0+J)/(popA-popT0+N),
       Jcity:jobsA?100*J/jobsA:0,Ncity:popA?100*N/popA:0,sT:N*P.n_school/1000,kT:N*P.n_kinder/1000,sP:nS>0?100*capS/nS:null,kP:nK>0?100*capK/nK:null,
       sNo:Math.max(0,N*P.n_school/1000-freeS),kNo:Math.max(0,N*P.n_kinder/1000-freeK)};
     if(D.provision){                     // 12.5 — оценка по точному расчёту blocksnet «как есть»
@@ -297,6 +637,18 @@ function calc(D,B,T,P,SCN,K){
   }
   if(D.provision)for(const name in out)for(const key of ['school','kindergarten']){const v=out[name].prov[key].env_in,b=out['Как есть'].prov[key].env_in;out[name].prov[key].delta=v==null||b==null?null:v-b;}
   const names=Object.keys(out),warns=kk.warns.slice();
+  if(rates){
+    const scenarios=Object.values(SCN);
+    const fromCity=[],missing=[];
+    rates.forEach(([,,local,reference],i)=>{
+      const group=jobGroups[i];
+      if(!local&&scenarios.some(sh=>sh[group]>0))(reference>0?fromCity:missing).push(group);
+    });
+    if(fromCity.length)warns.push(`Рабочие места: для ${fromCity.join(', ')} использованы аналоги за пределами окружения.`);
+    if(missing.length)warns.push(`Рабочие места: для ${missing.join(', ')} нет аналогов в наборе. Вклад этих функций показан только во вместимости.`);
+  }else if(P.jobs_method==='local'){
+    warns.push('В файле нет разбивки рабочих мест по функциям. Показана вместимость по площади. Для оценки по аналогам обновите JSON командой python -m mixuse page.');
+  }
   if(D.provision)for(const [key,label] of [['school','школьников'],['kindergarten','дошкольников']]){   // как closed_share в пакете
     const sd=D.provision[key],Ts=new Set(T);let dE=0,gone=0;for(const i of E)dE+=sd.demand[i];
     for(const l of sd.links)if(Ts.has(l[1])&&!Ts.has(l[0]))gone+=l[2];
@@ -305,9 +657,9 @@ function calc(D,B,T,P,SCN,K){
   }
   const maxJ=Math.max(0,...names.slice(1).map(x=>out[x].Jcity)),maxN=Math.max(0,...names.slice(1).map(x=>out[x].N));
   const CS=D.params.city_share;   // порог сравнения с городом, % — из файла (compare.CITY_SHARE пакета, ТЗ 18.2а)
-  if(maxJ>CS||maxN>CS/100*popA)warns.push(`Масштаб: вариант добавляет до ${fmt(maxJ)} % рабочих мест всего набора и до ${fmt(maxN)} жителей (во всём наборе ${fmt(popA)}). Варианты различаются объёмом застройки сильнее, чем сочетанием функций. Проверьте КИТ или уменьшите территорию.`);
+  if(maxJ>CS||maxN>CS/100*popA)warns.push(`Масштаб: на территории до ${fmt(maxJ)} % от исходного числа рабочих мест набора и до ${fmt(maxN)} жителей (во всём наборе ${fmt(popA)}). Проверьте КИТ и границы территории.`);
   const city=names.slice(1).some(x=>out[x].Jcity>CS||(popA&&100*out[x].N/popA>CS));   // как city_scale в пакете (ТЗ 18.2а)
-  return {out,E,eff,effByFunction,accessLabel,kit,kitSrc:kk.src,kitE:kk.kitE,F,S,popE,jobsE,warns,city};
+  return {out,E,eff,effByFunction,accessLabel,kit,kitSrc:kk.src,kitE:kk.kitE,F,S,popE,jobsE,warns,city,rates};
 }
 const GROUP_WORDS={'К':'торговле и услугам','ОД':'общественно-деловой функции'};
 function cmpWord(d){return Math.abs(d)<0.03?'почти без изменений':(d>0?'больше':'меньше');}
@@ -331,7 +683,13 @@ const cache={};let D=null,B=[],sel=new Set(),last=null,SCN0=null,SCN=null,reques
 const $=id=>document.getElementById(id);
 const html=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const functionGroups=['Ж','К','ОД','П'];
-function params(){return {R:+$('R').value,r:+$('r').value,q:D.params.q,k_liv:D.params.k_liv,'a_К':D.params['a_К'],'a_ОД':D.params['a_ОД'],'a_П':D.params['a_П'],n_school:+$('ns').value||D.params.n_school,n_kinder:+$('nk').value||D.params.n_kinder,access_method:$('accessMode').value,walk_minutes:$('accessMode').value==='walk'?+$('walkMinutes').value:null};}
+const groupLabels={'Ж':'Жильё','К':'Торговля и услуги','ОД':'Общественно-деловая','П':'Производство'};
+const groupColors={'Ж':'#335c78','К':'#246648','ОД':'#5f6251','П':'#91452f'};
+const baseline='Как есть';
+const origin=name=>D?.scenario_origins?.[name];
+const originClass=name=>origin(name)==='эмпирический'?'origin-emp':origin(name)==='экспериментальный'?'origin-exp':'';
+const signed=(v,d=0)=>`${v>0?'+':''}${fmt(v,d)}`;
+function params(){return {R:+$('R').value,r:+$('r').value,q:D.params.q,k_liv:D.params.k_liv,'a_К':D.params['a_К'],'a_ОД':D.params['a_ОД'],'a_П':D.params['a_П'],jobs_method:D.params.jobs_method??'legacy',n_school:+$('ns').value||D.params.n_school,n_kinder:+$('nk').value||D.params.n_kinder,access_method:$('accessMode').value,walk_minutes:$('accessMode').value==='walk'?+$('walkMinutes').value:null};}
 function exportButtons(){
   for(const id of ['csvShort','csvFull','png'])$(id).disabled=!last;
   $('geojson').disabled=!last||!D.blocks_crs;
@@ -339,8 +697,9 @@ function exportButtons(){
 }
 function resetResults(message){
   last=null;
+  if(!D)$('datasetNote').textContent=message;
   $('res').innerHTML=`<tr><td>${html(message)}</td></tr>`;
-  $('resFull').innerHTML='';$('info').innerHTML='';$('warn').style.display='none';
+  $('resFull').innerHTML='';$('pairResults').innerHTML='';$('info').innerHTML='';$('warn').style.display='none';
   exportButtons();draw();
 }
 function compute(){
@@ -348,7 +707,7 @@ function compute(){
   const T=B.map((b,i)=>sel.has(b.id)?i:-1).filter(i=>i>=0);
   const P=params(),mode=$('kitMode').value;
   $('walkThreshold').hidden=P.access_method!=='walk';
-  $('spRow').style.display=mode==='sp'?'':'none';$('kit').disabled=mode!=='own';
+  $('spField').hidden=mode!=='sp';$('kit').disabled=mode!=='own';
   $('tsel').textContent=[...sel].join(', ')||'—';$('blockIds').value=[...sel].join(', ');
   $('selectionError').textContent='';
   if(!T.length){resetResults('Выберите хотя бы один квартал на карте или укажите его номер.');return;}
@@ -371,7 +730,7 @@ function render(){
   const {out,F,S,popE,jobsE,kit,kitE,warns}=last,names=Object.keys(out);
   $('info').innerHTML=[['Площадь территории',fmt(S/1e4,1)+' га'],['КИТ варианта / окружения',kitLine(kit,kitE)],['Поэтажная площадь F',fmt(F)+' м²'],['Жителей в окружении',fmt(popE)],['Рабочих мест в окружении',fmt(jobsE)],['Рабочих мест на жителя, весь набор',fmt(D.totals.jobs/D.totals.pop,2)]].map(([a,b])=>`<div><b>${b}</b><span>${a}</span></div>`).join('');
   const w=$('warn');w.style.display=warns.length?'block':'none';w.innerHTML=warns.map(html).join('<br>');
-  const head=`<thead><tr><th>Показатель</th>${names.map(n=>`<th>${html(n)}</th>`).join('')}</tr></thead>`;
+  const head=`<thead><tr><th>Показатель</th>${names.map(n=>`<th class="${originClass(n)}">${html(n)}</th>`).join('')}</tr></thead>`;
   const mk=(lab,f,d=0,sign=false)=>`<tr><td>${lab}</td>${names.map(n=>{const v=f(out[n],n);const c=sign&&typeof v==='number'?(v>0?'pos':v<0?'neg':''):'';return `<td class="${c}">${typeof v==='number'?(sign&&v>0?'+':'')+fmt(v,d):html(v)}</td>`}).join('')}</tr>`;
   const sec=t=>`<tr class="sec"><td colspan="${names.length+1}">${t}</td></tr>`;
   const now=n=>n==='Как есть';
@@ -391,6 +750,7 @@ function render(){
   $('res').innerHTML=R.join('');
   const Q=[head];
   Q.push(sec('Работа и жильё'),mk('Жители на территории N',o=>o.N),mk('Рабочие места на территории J',o=>o.J),mk('Изменение рабочих мест к нынешним',(o,n)=>now(n)?'—':o.dJ,0,true),
+    ...(last.rates?[mk('Вместимость проектной площади, рабочих мест',o=>o.J_capacity??'—')]:[]),
     mk('Доля нежилых площадей, %',o=>o.d?100*(1-o.d['Ж']):''),mk('J, % рабочих мест всего набора',o=>o.Jcity,1),mk('N, % жителей всего набора',o=>o.Ncity,1),mk('K окружения',o=>o.K,2),mk('K окружения, нижняя граница',o=>o.KA,2),mk('K по всем данным',o=>o.Kall,3));
   Q.push(sec('Доступ к функциям'),mk('Способ расчёта доступа к К и ОД',()=>last.accessLabel),
     mk('Доступ к К: получают / теряют',(o,n)=>acc(o,n,'К')),mk('Доступ к ОД: получают / теряют',(o,n)=>acc(o,n,'ОД')),
@@ -409,6 +769,59 @@ function render(){
       mk('Сады: дети с территории',o=>o.kT),mk('Сады: обеспеченность окружения, %',o=>o.kP),mk('Сады: без свободного места в окружении',(o,n)=>now(n)?'—':o.kNo));
   }
   $('resFull').innerHTML=Q.join('');
+  renderPair();renderExplanation();
+}
+function shareChart(sh){
+  if(!sh)return 'Исходная застройка';
+  const total=functionGroups.reduce((sum,g)=>sum+sh[g],0);
+  if(!total)return 'Нулевая сумма долей';
+  return `<div class="share-chart" aria-label="${functionGroups.map(g=>`${g}: ${fmt(100*sh[g]/total,1)}%`).join(', ')}">`+
+    functionGroups.filter(g=>sh[g]>0).map(g=>{
+      const percent=100*sh[g]/total;
+      return `<span style="width:${percent}%;background:${groupColors[g]}" title="${groupLabels[g]} · ${fmt(percent,1)}%">${percent>=15?`${g} ${fmt(percent)}%`:''}</span>`;
+    }).join('')+'</div>';
+}
+function renderPair(){
+  if(!last)return;
+  const names=[$('pairA').value,$('pairB').value];
+  const base=last.out[baseline];
+  const head=names.map(n=>`<th class="${originClass(n)}">${html(n)}</th>`).join('');
+  const row=(label,values)=>`<tr><td>${label}</td>${values.map(v=>`<td>${v}</td>`).join('')}</tr>`;
+  const metrics=[['Жители территории','N',0],['Рабочие места территории','J',0],['Рабочих мест на жителя в окружении','K',2],
+    ['Обеспеченность школами, %','sP',1],['Обеспеченность садами, %','kP',1]];
+  const values=metrics.map(([label,key,d])=>row(label,names.map(n=>{
+    const v=last.out[n]?.[key],change=v-base[key];
+    if(v==null||!Number.isFinite(v))return '—';
+    const delta=n===baseline||base[key]==null||!Number.isFinite(change)?'':` <span class="${change>0?'pos':change<0?'neg':''}">(${signed(change,d)})</span>`;
+    return fmt(v,d)+delta;
+  })));
+  for(const g of ['К','ОД'])values.push(row(`Доступ к ${g}: получили / потеряли`,names.map(n=>{
+    const a=last.out[n]?.acc[g];return a?`+${fmt(a[0])} / −${fmt(a[1])}`:'—';
+  })));
+  $('pairResults').innerHTML=`<thead><tr><th>Показатель</th>${head}</tr></thead>`+
+    row('Функциональные доли',names.map(n=>shareChart(SCN[n])))+values.join('');
+}
+function renderExplanation(){
+  if(!D)return;
+  const meta=D.explanation;
+  const old=[['Жители и рабочие места','N = F × δЖ × k_liv / q; J = F × (δК/a_К + δОД/a_ОД + δП/a_П)',
+    'F = площадь территории × КИТ. «Как есть» использует показатели существующей застройки.'],
+    ['Рабочих мест на жителя','K = (Jₑ + J) / (Nₑ + N)','Jₑ и Nₑ — рабочие места и жители окружения.'],
+    ['Доступность','Сравнение «до / после»','К и ОД проверяются по расстоянию или по пешеходной матрице.']];
+  $('metricHelp').innerHTML=(meta?.metrics||old).map(([title,formula,description])=>
+    `<li><strong>${html(title)}</strong><code>${html(formula)}</code>${html(description)}</li>`).join('');
+  const keys=['kit','R','r','q','k_liv','a_К','a_ОД','a_П','jobs_method','n_school','n_kinder'];
+  const rows=keys.map(k=>{
+    const saved=D.params[k],p=meta?.parameters?.[k];
+    const used=k==='kit'?last?.kit??saved:k==='jobs_method'?(last?.rates?'local':'legacy'):
+      k==='n_school'&&D.provision?D.provision.school.norm:k==='n_kinder'&&D.provision?D.provision.kindergarten.norm:last?.params[k]??saved;
+    const source=k==='kit'&&last?last.kitSrc:
+      k==='jobs_method'?(last?.rates?'кварталы-аналоги: '+jobGroups.map((g,i)=>`${g} ${last.rates[i][2]} / ${last.rates[i][3]}`).join(', ')+' (окружение / остальной набор)':'вместимость по площади'):
+      D.provision&&['n_school','n_kinder'].includes(k)?'BlocksNet, нормы в файле обеспеченности':
+      used!==saved?'введено на странице (источник не указан)':p?.source||'источник не указан в файле';
+    return `<tr><td>${html(k)} · ${html(p?.label||k)}</td><td>${html(used)}</td><td>${html(source)}</td></tr>`;
+  });
+  $('parameterHelp').innerHTML='<thead><tr><th>Параметр и единицы</th><th>Значение</th><th>Источник</th></tr></thead>'+rows.join('');
 }
 function setScenarios(){
   const paired=$('scenarioMode').value==='paired'&&D.paired_scenarios;
@@ -420,22 +833,25 @@ function setScenarios(){
 }
 function renderShares(){
   const g=functionGroups,fixed=$('scenarioMode').value==='paired';
-  $('shares').innerHTML=`<thead><tr><th>Вариант</th>${g.map(x=>`<th>${x}</th>`).join('')}</tr></thead>`+
-   Object.entries(SCN).map(([n,s])=>`<tr><td>${html(n)}</td>${g.map(x=>fixed?`<td>${html(s[x])}</td>`:
-     `<td><input type="number" min="0" max="100" data-n="${html(n)}" data-g="${x}" value="${html(s[x])}"></td>`).join('')}</tr>`).join('')+
-   (fixed?'':`<tr><td colspan="5"><button id="resetSh">Вернуть доли по умолчанию</button></td></tr>`);
+  $('shareLegend').innerHTML=g.map(key=>`<span><i class="sw" style="background:${groupColors[key]}"></i>${key} · ${groupLabels[key]}</span>`).join('');
+  $('shares').innerHTML=`<thead><tr><th>Вариант</th><th>Состав</th>${g.map(x=>`<th>${x}</th>`).join('')}</tr></thead>`+
+   Object.entries(SCN).map(([n,s])=>`<tr><td>${html(n)}${origin(n)?`<br><span class="origin-badge ${originClass(n)}">${html(origin(n))}</span>`:''}</td><td class="shareCell">${shareChart(s)}</td>${g.map(x=>fixed?`<td>${html(s[x])}</td>`:
+     `<td><input type="number" min="0" max="100" aria-label="${html(n)}: ${groupLabels[x]}, %" data-n="${html(n)}" data-g="${x}" value="${html(s[x])}"></td>`).join('')}</tr>`).join('')+
+   (fixed?'':`<tr><td colspan="6"><button id="resetSh">Вернуть доли по умолчанию</button></td></tr>`);
   if(!fixed){
-    $('shares').querySelectorAll('input').forEach(i=>i.onchange=()=>{i.value=SCN[i.dataset.n][i.dataset.g]=Math.min(100,Math.max(0,+i.value||0));compute();});
+    $('shares').querySelectorAll('input').forEach(i=>i.onchange=()=>{i.value=SCN[i.dataset.n][i.dataset.g]=Math.min(100,Math.max(0,+i.value||0));i.closest('tr').querySelector('.shareCell').innerHTML=shareChart(SCN[i.dataset.n]);compute();});
     $('resetSh').onclick=()=>{SCN=JSON.parse(JSON.stringify(SCN0));renderShares();compute();};
   }
   const options=['Как есть',...Object.keys(SCN)];
-  const shown=options.includes($('showSel').value)?$('showSel').value:options[1];
-  $('showSel').innerHTML=options.map(n=>`<option value="${html(n)}">${html(n)}</option>`).join('');
-  $('showSel').value=shown;
+  const items=options.map(n=>`<option value="${html(n)}">${html(n)}</option>`).join('');
+  for(const [id,choice] of [['showSel',options[1]],['pairA',options[1]],['pairB',options.find(n=>origin(n)==='экспериментальный')||options[2]]]){
+    const select=$(id),current=select.value;
+    select.innerHTML=items;select.value=options.includes(current)?current:choice??baseline;
+  }
 }
 
 function experiment(){
-  const parameters={...last.params};
+  const parameters={...last.params,jobs_method:last.rates?'local':'legacy'};
   if(D.provision){parameters.n_school=D.provision.school.norm;parameters.n_kinder=D.provision.kindergarten.norm;}
   return {город:D.name, кварталы:last.territory, набор:$('scenarioMode').value,
     доступ_К_ОД:last.accessLabel,
@@ -464,17 +880,42 @@ function saveCsv(id,suffix){
   const text=rows.map(row=>Array.from({length:width},(_,i)=>cell(row[i])).join(';')).join('\r\n');
   save(new Blob(['\uFEFF',text],{type:'text/csv;charset=utf-8'}),suffix);
 }
+function territoryAreaShare(block,area){
+  return area>0?block.a/area:0;
+}
 function saveGeojson(){
   if(!last||!D.blocks_crs)return;
-  const surrounding=new Set(last.E);
-  const features=B.map((b,i)=>({type:'Feature',geometry:{type:'MultiPolygon',coordinates:b.geo},properties:{
-    block_id:b.id,zone:b.zc,area:b.a,pop:b.pop,jobs:b.j,
-    есть_К:!!b.K,есть_ОД:!!b.OD,есть_П:!!b.P,cap_school:b.sc,cap_kinder:b.kg,
-    территория:sel.has(b.id),окружение:surrounding.has(i),
-    ...Object.fromEntries(Object.keys(SCN).flatMap(name=>[
-      [`доступ ${name}`,last.eff[name][i]||0],
-      ...['К','ОД'].map(g=>[`изменение доступа ${g} ${name}`,last.effByFunction[name][g][i]||0])]))}}));
+  const territory=new Set(last.territory),surrounding=new Set(last.E);
+  const scenarios=Object.keys(SCN);
+  const features=B.map((b,i)=>{
+    const selected=territory.has(b.id),share=territoryAreaShare(b,last.S);
+    let current=jobGroups.map((_,g)=>b.employment?.[g]?.[0]??null);
+    const grouped=current.every(j=>j!==null)?current.reduce((sum,j)=>sum+j,0):null;
+    // Исходное jobs в файле страницы округлено до сотых, а разбивка хранится без округления.
+    if(grouped>b.j)current=current.map(j=>j*(b.j/grouped));
+    const other=grouped===null?null:Math.max(0,b.j-grouped);
+    const properties={
+      block_id:b.id,zone:b.zc,area:b.a,pop:b.pop,jobs:b.j,
+      есть_К:!!b.K,есть_ОД:!!b.OD,есть_П:!!b.P,cap_school:b.sc,cap_kinder:b.kg,
+      территория:selected,окружение:surrounding.has(i),jobs_прочие:other
+    };
+    jobGroups.forEach((g,k)=>{properties[`jobs_${g}`]=current[k];});
+    for(const name of scenarios){
+      const result=last.out[name],jobs=selected?result.J*share:b.j;
+      properties[`рабочие места ${name}`]=jobs;
+      properties[`изменение рабочих мест ${name}`]=jobs-b.j;
+      jobGroups.forEach((g,k)=>{
+        properties[`занятость_${g} ${name}`]=selected?result.jobsByFunction[k]*share:current[k];
+      });
+      properties[`занятость_прочие ${name}`]=selected?0:other;
+      properties[`доступ ${name}`]=last.eff[name][i]||0;
+      for(const g of ['К','ОД'])properties[`изменение доступа ${g} ${name}`]=last.effByFunction[name][g][i]||0;
+    }
+    return {type:'Feature',geometry:{type:'MultiPolygon',coordinates:b.geo},properties};
+  });
   const geo={type:'FeatureCollection',crs:{type:'name',properties:{name:D.blocks_crs}},
+    'метод расчёта рабочих мест':last.rates?'local':'legacy',
+    'распределение рабочих мест':'пропорционально площади кварталов территории',
     эксперимент:experiment(),features};
   save(new Blob([JSON.stringify(geo)],{type:'application/geo+json'}),'кварталы.geojson');
 }
@@ -487,24 +928,69 @@ function savePng(){
 }
 
 // ---------- карта
-const cv=$('map'),ctx=cv.getContext('2d');let view={s:1,ox:0,oy:0},dpr=1;
-function fit(){const r=cv.getBoundingClientRect();dpr=window.devicePixelRatio||1;cv.width=r.width*dpr;cv.height=r.height*dpr;
-  let x0=1e18,y0=1e18,x1=-1e18,y1=-1e18;for(const b of B){x0=Math.min(x0,b.bb[0]);y0=Math.min(y0,b.bb[1]);x1=Math.max(x1,b.bb[2]);y1=Math.max(y1,b.bb[3]);}
-  const s=Math.min(r.width/(x1-x0),r.height/(y1-y0))*0.95;view={s,ox:r.width/2-s*(x0+x1)/2,oy:r.height/2+s*(y0+y1)/2};}
+const cv=$('map'),ctx=cv.getContext('2d');let view={s:1,ox:0,oy:0},dpr=1,mapMarks=[],focused=false;
+const mapStyles=window.getComputedStyle?.(cv);
+const mapColors=Object.fromEntries(
+  ['map-ground','map-selected','map-edge','map-housing','map-industry','map-business','map-other','gain','loss']
+    .map(name=>[name,mapStyles?.getPropertyValue('--'+name).trim()])
+);
+function fit(blocks=B){
+  if(!blocks.length)return;
+  const r=cv.getBoundingClientRect();dpr=window.devicePixelRatio||1;cv.width=r.width*dpr;cv.height=r.height*dpr;
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  for(const b of blocks){x0=Math.min(x0,b.bb[0]);y0=Math.min(y0,b.bb[1]);x1=Math.max(x1,b.bb[2]);y1=Math.max(y1,b.bb[3]);}
+  const s=Math.min(r.width/Math.max(1,x1-x0),r.height/Math.max(1,y1-y0))*0.88;
+  view={s,ox:r.width/2-s*(x0+x1)/2,oy:r.height/2+s*(y0+y1)/2};
+}
 const X=x=>view.ox+view.s*x,Y=y=>view.oy-view.s*y;
 function path(b){ctx.beginPath();for(const p of b.g)for(const r of p){r.forEach((q,i)=>i?ctx.lineTo(X(q[0]),Y(q[1])):ctx.moveTo(X(q[0]),Y(q[1])));ctx.closePath();}}
+function mapImpact(name,groups){
+  const result=last?.out[name],base=last?.out[baseline];
+  const impact=$('territoryImpact'),status=$('mapStatus');
+  impact.hidden=status.hidden=!result;
+  if(!result)return;
+  impact.textContent=name===baseline?`Территория «Как есть» · жителей ${fmt(base.N)} · рабочих мест ${fmt(base.J)}`:
+    `Территория · жители ${fmt(base.N)} → ${fmt(result.N)} (${signed(result.N-base.N)}) · рабочие места ${fmt(base.J)} → ${fmt(result.J)} (${signed(result.J-base.J)})`;
+  const summaries=groups.map(g=>({g,changes:result.acc[g]}));
+  const changed=summaries.some(({changes})=>changes?.some(value=>value>0));
+  const message=name===baseline?'Исходное состояние. Выберите сценарий, чтобы увидеть изменения.':
+    changed?summaries.map(({g,changes})=>`${g}: +${fmt(changes[0])} получили / −${fmt(changes[1])} потеряли`).join(' · '):
+    'Изменений доступности нет';
+  if(status.textContent!==message)status.textContent=message;
+}
+function drawAccessMarks(name,groups){
+  mapMarks=[];
+  const effects=last?.effByFunction[name];
+  if(!effects)return;
+  const affected=new Set(groups.flatMap(g=>Object.keys(effects[g])));
+  for(const key of affected){
+    const i=Number(key),b=B[i];
+    const active=groups.filter(g=>effects[g][i]);
+    const radius=Math.min(22,7+Math.sqrt(b.pop)*.39);
+    active.forEach((g,j)=>{
+      const x=X(b.cx)+(j-(active.length-1)/2)*(radius*2+2),y=Y(b.cy);
+      const gain=effects[g][i]>0;
+      ctx.beginPath();ctx.arc(x,y,radius,0,2*Math.PI);
+      ctx.fillStyle=mapColors[gain?'gain':'loss'];ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.font=`bold ${radius>=13?11:8}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';
+      ctx.fillText(`${gain?'+':'−'}${g}`,x,y);
+      mapMarks.push({i,x,y,radius});
+    });
+  }
+}
 function draw(){
+  $('mapEmpty').hidden=B.length>0;
+  $('mapZoom').hidden=!B.length;
   ctx.setTransform(dpr,0,0,dpr,0,0);const r=cv.getBoundingClientRect();
-  ctx.fillStyle='#fbfaf8';ctx.fillRect(0,0,r.width,r.height);
-  const name=$('showSel').value,g=$('mapFunction').value;
-  const eff=(g?last?.effByFunction[name]?.[g]:last?.eff[name])||{};const Es=last?new Set(last.E):new Set();
+  ctx.fillStyle=mapColors['map-ground'];ctx.fillRect(0,0,r.width,r.height);
+  const name=$('showSel').value,g=$('mapFunction').value,groups=g?[g]:['К','ОД'];
+  const Es=last?new Set(last.E):new Set();
   for(let i=0;i<B.length;i++){const b=B[i];path(b);
-    let c=b.z==='П'?'#c9c3bb':b.z==='ОД'?'#c7d9ef':b.pop>0?'#f2d7b6':'#ece9e4';
-    if(eff[i]>0)c='#2e8b57';else if(eff[i]<0)c='#d9822b';
-    if(sel.has(b.id))c='#6b3fa0';
-    ctx.fillStyle=c;ctx.fill('evenodd');ctx.strokeStyle='rgba(0,0,0,.18)';ctx.lineWidth=.5;ctx.stroke();}
-  ctx.strokeStyle='#1f2328';ctx.lineWidth=1.6;for(const i of Es){path(B[i]);ctx.stroke();}
+    const color=sel.has(b.id)?'map-selected':b.z==='П'?'map-industry':b.z==='ОД'?'map-business':b.pop>0?'map-housing':'map-other';
+    ctx.fillStyle=mapColors[color];ctx.fill('evenodd');ctx.strokeStyle='rgba(51,58,52,.32)';ctx.lineWidth=.65;ctx.stroke();}
+  ctx.strokeStyle=mapColors['map-edge'];ctx.lineWidth=1.6;for(const i of Es){path(B[i]);ctx.stroke();}
   ctx.fillStyle='#c0392b';for(const p of (D&&D.pts.metro)||[]){ctx.beginPath();ctx.arc(X(p[0]),Y(p[1]),3.5,0,7);ctx.fill();}
+  drawAccessMarks(name,groups);mapImpact(name,groups);
 }
 function pick(ev){const r=cv.getBoundingClientRect();const x=(ev.clientX-r.left-view.ox)/view.s,y=(view.oy-(ev.clientY-r.top))/view.s;
   for(let i=0;i<B.length;i++){const b=B[i];if(x<b.bb[0]||x>b.bb[2]||y<b.bb[1]||y>b.bb[3])continue;if(inPoly(x,y,b))return i;}return -1;}
@@ -513,15 +999,46 @@ cv.addEventListener('mousedown',e=>{drag=[e.clientX,e.clientY,view.ox,view.oy];m
 window.addEventListener('mouseup',e=>{if(drag&&!moved&&D){const i=pick(e);if(i>=0){const id=B[i].id;sel.has(id)?sel.delete(id):sel.add(id);compute();}}drag=null;});
 cv.addEventListener('mousemove',e=>{
   if(drag){const dx=e.clientX-drag[0],dy=e.clientY-drag[1];if(Math.abs(dx)+Math.abs(dy)>3)moved=true;if(moved){view.ox=drag[2]+dx;view.oy=drag[3]+dy;draw();}}
-  if(!D)return;const i=pick(e),t=$('tip');
+  if(!D)return;
+  const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+  const marker=mapMarks.find(m=>Math.hypot(m.x-x,m.y-y)<=m.radius);
+  const i=marker?.i??pick(e),t=$('tip');
   if(i<0){t.style.display='none';return;}
   const b=B[i],fn=[b.K?'К':'',b.OD?'ОД':'',b.P?'П':''].filter(Boolean).join(', ')||'нет';
   t.innerHTML=`Квартал ${html(b.id)}${b.zc?' · '+html(b.zc):''}<br>жителей ${fmt(b.pop)} · рабочих мест ${fmt(b.j)} (А: ${fmt(b.jA)})<br>функции: ${fn} · школы ${fmt(b.sc)} · сады ${fmt(b.kg)}`;
-  const r=cv.getBoundingClientRect();t.style.display='block';t.style.left=Math.min(e.clientX-r.left+12,r.width-260)+'px';t.style.top=(e.clientY-r.top+12)+'px';});
+  const shown=$('showSel').value,result=last?.out[shown];
+  if(result?.d&&sel.has(b.id)){
+    const jobs=result.J*territoryAreaShare(b,last.S);
+    t.innerHTML+=`<br>Рабочих мест по сценарию ${fmt(jobs)} (${signed(jobs-b.j)})`;
+  }else if(result?.d){
+    const changes=last.effByFunction[shown];
+    t.innerHTML+='<br>'+['К','ОД'].map(g=>`${g}: получили ${fmt(changes[g][i]>0?b.pop:0)}, потеряли ${fmt(changes[g][i]<0?b.pop:0)}`).join('<br>');
+  }
+  t.style.display='block';t.style.left=Math.max(0,Math.min(x+12,r.width-t.offsetWidth))+'px';
+  t.style.top=Math.max(0,Math.min(y+12,r.height-t.offsetHeight))+'px';});
 cv.addEventListener('mouseleave',()=>$('tip').style.display='none');
-cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top,k=Math.exp(-e.deltaY*0.0015);
-  view.ox=mx-(mx-view.ox)*k;view.oy=my-(my-view.oy)*k;view.s*=k;draw();},{passive:false});
-window.addEventListener('resize',()=>{if(B.length){fit();draw();}});
+function zoom(factor,x,y){
+  if(!B.length)return;
+  view.ox=x-(x-view.ox)*factor;view.oy=y-(y-view.oy)*factor;view.s*=factor;draw();
+}
+cv.addEventListener('wheel',e=>{
+  if(!B.length)return;
+  e.preventDefault();
+  const r=cv.getBoundingClientRect();
+  zoom(Math.exp(-e.deltaY*0.0015),e.clientX-r.left,e.clientY-r.top);
+},{passive:false});
+$('zoomIn').onclick=()=>{
+  const r=cv.getBoundingClientRect();zoom(1.25,r.width/2,r.height/2);
+};
+$('zoomOut').onclick=()=>{
+  const r=cv.getBoundingClientRect();zoom(1/1.25,r.width/2,r.height/2);
+};
+function fitArea(){
+  const indexes=new Set(last?.E||[]);
+  const selected=B.filter((b,i)=>sel.has(b.id)||indexes.has(i));
+  fit(selected.length?selected:B);
+}
+window.addEventListener('resize',()=>{if(B.length){if(focused)fitArea();else fit();draw();}});
 
 // ---------- загрузка: пример (рядом с этой страницей, папка данные/) или свой файл
 function use(data){
@@ -539,7 +1056,15 @@ function use(data){
   $('walkMinutes').max=walk?.max_minutes??'';
   $('walkNote').textContent=walk?`${walk.source}: пороги до ${walk.max_minutes} мин. r остаётся геометрическим радиусом для производства.`:
     D.walk_access_note||'В файле нет подходящих пешеходных связей. Используется геометрическое расстояние.';
-  $('datasetNote').textContent=D.name+(D.clip?` · фрагмент набора, радиус выгрузки ${fmt(D.clip)} м. Окружение считается по загруженным кварталам.`:'');
+  $('datasetNote').textContent=D.name+(D.clip?' · фрагмент набора':'');
+  const coverage=$('coverageNote');coverage.hidden=!D.clip;coverage.innerHTML='';
+  if(D.clip){
+    const fullCount=D.total_blocks??(D.code==='spb_full'&&B.length===1490?9368:null);
+    coverage.innerHTML=`<strong>Фрагмент: ${fmt(B.length)} кварталов${fullCount?` из ${fmt(fullCount)}`:''}</strong> · радиус выгрузки ${fmt(D.clip/1000,1)} км.<br>`+
+      'Фрагмент ускоряет загрузку и расчёт в браузере. Численность и рабочие места всего набора взяты из полной подготовки, как и исходный расчёт BlocksNet, если он сохранён. Итоговые эксперименты из репозитория рассчитаны на полных наборах.<br>'+
+      'Карта, окружение, изменения доступа и оценка школ и садов на странице ограничены выгруженными кварталами. У края могут отсутствовать кварталы и альтернативные места назначения за границей фрагмента.<br>'+
+      'Для большего охвата увеличьте «ОХВАТ_JSON» в ноутбуке или «--clip» в команде page. Для полной выгрузки задайте «ОХВАТ_JSON = None» или запустите page без «--clip».';
+  }
   const ids=new Set(B.map(b=>b.id));sel=new Set((D.territory||[]).filter(id=>ids.has(id)));
   $('pairedOption').disabled=!D.paired_scenarios;
   if(!D.paired_scenarios)$('scenarioMode').value='standard';
@@ -553,9 +1078,9 @@ function use(data){
   $('normsNote').textContent=pv?`Школы и сады: оценка по точному расчёту blocksnet ${pv.blocksnet} «как есть» (граф ${pv['граф']}; нормы blocksnet: школа ${pv.school.norm} мест на 1000 жителей, ${fmt(pv.school.threshold)} мин; сад ${pv.kindergarten.norm}, ${fmt(pv.kindergarten.threshold)} мин). Точный расчёт варианта — командой python -m mixuse compare.`
     :'Школы и сады: запасной расчёт 4.7.3 (места и потребность внутри окружения); нормы — '+D.params.n_school+' и '+D.params.n_kinder+' мест на 1000 жителей (как в каталоге blocksnet, ТЗ 16.2; регионального источника нет).';
   $('provNote').textContent=pv?'Оценка обеспеченности: жители территории уезжают, учреждения территории закрываются; места распределяются по очереди — сначала кварталы, где ищущих место детей больше на минуту пути (так распределяет blocksnet); кому учреждение в пределах порога, тот получает место раньше, чем тот, кому оно за порогом.':'';
-  fit();compute();
+  focused=false;fit();compute();
 }
-async function load(code){
+async function load(code,focusOnTerritory=false){
   if(!code)return;
   const request=startLoad();
   try{
@@ -564,12 +1089,16 @@ async function load(code){
       if(!response.ok)throw new Error(String(response.status));
       cache[code]=await response.json();
     }
-    if(request===requestId)use(cache[code]);
-  }catch(e){if(request===requestId)resetResults(`Не удалось открыть пример. Запустите страницу через локальный сервер или загрузите файл «страница/данные/${code}.json» кнопкой «свой файл».`);}
+    if(request===requestId){
+      use(cache[code]);
+      if(focusOnTerritory&&last){focused=true;fitArea();draw();}
+    }
+  }catch(e){if(request===requestId)resetResults(`Не удалось открыть пример. Запустите страницу через локальный сервер или загрузите «страница/данные/${code}.json» кнопкой «Загрузить JSON».`);}
 }
 function startLoad(){
   D=null;B=[];sel.clear();$('tsel').textContent='—';$('blockIds').value='';$('selectionError').textContent='';
   $('datasetNote').textContent='';$('scenarioNote').textContent='';$('normsNote').textContent='';$('provNote').textContent='';
+  $('coverageNote').hidden=true;$('metricHelp').innerHTML='';$('parameterHelp').innerHTML='';
   $('walkOption').disabled=true;$('walkThreshold').hidden=true;$('walkNote').textContent='';
   $('shares').innerHTML='';$('showSel').innerHTML='';$('pairedOption').disabled=true;
   resetResults('Загрузка данных…');return ++requestId;
@@ -583,6 +1112,7 @@ function selectById(){
   sel=new Set(tokens.map(id=>byId.get(id)));compute();
 }
 $('city').onchange=e=>load(e.target.value);
+$('drop').onclick=()=>$('file').click();
 $('file').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
   e.target.value='';$('city').value='';const request=startLoad();
@@ -597,10 +1127,18 @@ $('scenarioMode').onchange=()=>{if(D){setScenarios();compute();}};
 $('run').onclick=compute;['kit','R','r','ns','nk','kitMode','spRow','accessMode','walkMinutes'].forEach(k=>$(k).onchange=compute);
 $('showSel').onchange=draw;
 $('mapFunction').onchange=draw;
+$('pairA').onchange=$('pairB').onchange=renderPair;
+$('focusArea').onclick=()=>{focused=true;fitArea();draw();};
+$('fitAll').onclick=()=>{focused=false;fit();draw();};
 $('csvShort').onclick=()=>saveCsv('res','сравнение_вариантов.csv');
 $('csvFull').onclick=()=>saveCsv('resFull','сравнение_подробно.csv');
 $('geojson').onclick=saveGeojson;
 $('png').onclick=savePng;
+
+if(['http:', 'https:'].includes(window.location?.protocol)){
+  $('city').value||='vysotsk';
+  load($('city').value,true);
+}
 </script>
 </body>
 </html>

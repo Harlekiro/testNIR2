@@ -46,6 +46,8 @@ def merge_params(user):
         d = base[k]
         if k in TEXT_PARAMS:                   # строковые параметры
             P[k] = None if v is None else str(v).strip()
+            if k == 'jobs_method' and P[k] not in ('local', 'legacy'):
+                raise ConfigError('jobs_method: допустимы local и legacy.')
             if k == 'kit_sp_row' and P[k] is not None and P[k] not in SP42_B1:
                 raise ConfigError(f'kit_sp_row: «{v}» — нет такой строки табл. Б.1 СП 42.13330.2016. '
                                   f'Допустимо: {", ".join(SP42_B1)}.')

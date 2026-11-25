@@ -54,7 +54,11 @@ def test_kit_by_sp42_and_env_for_comparison(tmp_path):
     assert info['КИТ окружения по данным (для сравнения)'] == 0.05
     assert info['КИТ варианта / окружения'] == f'0,80 / 0,05 (в {0.8 / (fa / 160000):.1f} раз плотнее)'.replace('.', ',')
     assert full.loc['Жители на территории N', 'Ж+К+ОД'] == round(F * 0.75 * 0.7 / 30)
-    assert full.loc['Рабочие места на территории J', 'Ж+К+ОД'] == round(F * (0.05 / 28 + 0.20 / 15))
+    capacity = round(F * (0.05 / 28 + 0.20 / 15))
+    assert full.loc['Вместимость проектной площади, рабочих мест', 'Ж+К+ОД'] == capacity
+    assert full.loc['Рабочие места на территории J', 'Ж+К+ОД'] < capacity
+    legacy, _, _ = compare(city, [21], dict(cfg['params'], jobs_method='legacy'), cfg['scenarios'])
+    assert legacy.loc['Рабочие места на территории J', 'Ж+К+ОД'] == capacity
     origins = {k: how for k, _, how in param_origins(cfg, info)}
     assert origins['kit'].startswith('свод правил') and origins['R'] == 'по умолчанию — без источника'
 

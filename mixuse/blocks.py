@@ -310,7 +310,8 @@ def _finish(L, cfg, P, report, blocks, s, bdf, bpolys, st, nr_idx, owner, fs, bi
             social_in[nr_idx[o]].append((ty, cap))
     rules = cfg.get('zone_rules', [])
     zone_of_block = np.array([zone_group(z, rules, cfg.get('_zone_dict')) for z in blocks['zone']], dtype=object)
-    counters = jobs_v5(bdf, bpolys, nr_idx, st.to_numpy(), types_in, social_in, zone_of_block, bi_types, P, norms, type_group)
+    counters, building_employment = jobs_v5(
+        bdf, bpolys, nr_idx, st.to_numpy(), types_in, social_in, zone_of_block, bi_types, P, norms, type_group)
 
     steps = steps_report(bdf)
     report['шаги таблицы 4.4: зданий / поэтажная площадь, м² / рабочих мест'] = {
@@ -349,7 +350,10 @@ def _finish(L, cfg, P, report, blocks, s, bdf, bpolys, st, nr_idx, owner, fs, bi
     report['K_ref — рабочих мест на жителя в среднем'] = round(float(t['jobs'].sum() / t['pop'].sum()), 3) if t['pop'].sum() > 0 else None
     report['мест в школах / детских садах'] = f"{int(t['cap_school'].sum())} / {int(t['cap_kinder'].sum())}"
     pts = {g: s.loc[s.group == g, ['x', 'y']].to_numpy() for g in ['метро', 'остановка']}
+    employment = np.zeros((len(t), *building_employment.shape[1:]))
+    np.add.at(employment, bdf['block'].to_numpy(dtype=int), building_employment)
     city = {'table': t, 'polys': list(blocks['polys']), 'geom': BlockGeometry(list(blocks['polys'])),
+            'employment': employment,
             'orig': list(blocks['_g']), 'proj': L['frame']['proj'], 'pts': pts, 'report': report, 'epsg': L['epsg'],
             'crs_notes': L.get('crs_notes', []), 'rules': 'v5'}
     city['detail'] = {'buildings': bdf, 'bpolys': bpolys, 'services': s, 'services_all': L['services']}

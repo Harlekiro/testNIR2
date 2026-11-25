@@ -7,6 +7,7 @@ import pytest
 from mixuse.checks import builtin_sensitivity, estimates_check, sensitivity, threshold_check
 from mixuse.compare import compare
 from mixuse.export import blocks_geojson, scenario_map_name, table_csv
+from mixuse.employment import JOB_GROUPS
 from mixuse.params import (SCENARIOS, EMPIRICAL_SCENARIOS,
                            EXPERIMENTAL_SCENARIOS, paired_scenarios, SCENARIO_ORIGINS)
 from mixuse.scenarios import validate_scenarios
@@ -73,8 +74,8 @@ def test_paired_tables_keep_all_results(v5):
 
     full = paired_tables[0][0]
     for name in ('Ж+К+ОД', 'К+ОД'):
-        assert full.at['Рабочие места на территории J', f'{name} [эмп.]'] != full.at[
-            'Рабочие места на территории J', f'{name} [эксп.]']
+        capacity = 'Вместимость проектной площади, рабочих мест'
+        assert full.at[capacity, f'{name} [эмп.]'] != full.at[capacity, f'{name} [эксп.]']
 
 
 def test_paired_exports_keep_full_names(v5, tmp_path):
@@ -99,6 +100,37 @@ def test_paired_exports_keep_full_names(v5, tmp_path):
         assert access == {f'доступ {name}': detail['effect'][name].get(k, 0) for name in paired}
 
     assert {scenario_map_name(name, paired) for name in paired} == {f'карта_{name}.png' for name in paired}
+
+
+@pytest.mark.parametrize('method', ['local', 'legacy'])
+def test_layer_distributes_scenario_jobs_without_changing_outer_blocks(v5, tmp_path, method):
+    cfg, _, city = v5
+    table = city['table'].copy()
+    table.loc[table.block_id == 20, 'area'] *= 2
+    city = dict(city, table=table)
+    name = 'К+ОД+П'
+    scenarios = {name: SCENARIOS[name]}
+    _, _, detail = compare(city, [20, 21], dict(cfg['params'], jobs_method=method), scenarios)
+    path = tmp_path / 'blocks.geojson'
+    blocks_geojson(city, path, detail)
+    layer = json.loads(path.read_text(encoding='utf-8'))
+    assert layer['метод расчёта рабочих мест'] == method
+    result = detail['values'][name]
+    fields = [f'занятость_{group} {name}' for group in JOB_GROUPS]
+    inside = []
+    for feature in layer['features']:
+        p = feature['properties']
+        assert p[f'рабочие места {name}'] == pytest.approx(sum(p[key] for key in fields) + p[f'занятость_прочие {name}'])
+        if p['территория']:
+            inside.append(p)
+        else:
+            assert p[f'рабочие места {name}'] == p['jobs']
+            assert p[f'изменение рабочих мест {name}'] == 0
+    assert sum(p[f'рабочие места {name}'] for p in inside) == pytest.approx(result['J'])
+    assert sum(p[f'изменение рабочих мест {name}'] for p in inside) == pytest.approx(result['dJ'])
+    assert inside[0][f'рабочие места {name}'] == pytest.approx(2 * inside[1][f'рабочие места {name}'])
+    for group, key in zip(JOB_GROUPS, fields, strict=True):
+        assert sum(p[key] for p in inside) == pytest.approx(result['jobs_by_function'][group])
 
 
 @pytest.mark.parametrize('name', ['Как есть', '_source', '_warnings'])

@@ -5,6 +5,7 @@
 Сводного балла и порядка вариантов нет.
 """
 from .errors import UserMessage
+from .employment import context_rates, scenario_employment
 import numpy as np
 import pandas as pd
 
@@ -120,7 +121,7 @@ def kit_line(kit, kitE):
 def compare_v5(city, T_ids, P, SCN, prov=None, *, walk_access=None):
     """Шаги 5–6 по правилам v5. Существующая застройка территории в варианте заменяется полностью (4.6.3).
 
-        F = S_T · КИТ;  N = F · δ_Ж · k_liv ÷ q;  J = F · (δ_К ÷ a_К + δ_ОД ÷ a_ОД + δ_П ÷ a_П)        (4.6.2, 4.6.4)
+        F = S_T · КИТ;  N = F · δ_Ж · k_liv ÷ q;  J — оценка по аналогам с ограничением вместимости (4.6.2, 4.6.4)
         ΔJ = J − J_T0;  K окружения = (J_E + J) ÷ (P_E + N);  нижняя граница — (J_E,A + J_A) ÷ (P_E + N);
         K по всем данным = (ΣJobs − J_T0 + J) ÷ (ΣPop − P_T0 + N)                                        (4.7.1)
         доступ к К и ОД — получают / теряют; П — жители в радиусе r от производства до / после           (4.7.2)
@@ -140,6 +141,9 @@ def compare_v5(city, T_ids, P, SCN, prov=None, *, walk_access=None):
     kit, kit_from, kitE, kit_warns = choose_kit(t, E, P)
     C = t[['cx', 'cy']].to_numpy()
     S = t.area.iloc[T].sum(); F = S * kit
+    rates = None
+    if P.get('jobs_method') == 'local' and 'employment' in city:
+        rates = context_rates(t.area.to_numpy(), city['employment'], T, E)
     popE, jobsE, jobsE_A = t['pop'].iloc[E].sum(), t['jobs'].iloc[E].sum(), t['jobs_A'].iloc[E].sum()
     popA, jobsA = t['pop'].sum(), t['jobs'].sum()
     popT0, jobsT0, jobsT0_A = t['pop'].iloc[T].sum(), t['jobs'].iloc[T].sum(), t['jobs_A'].iloc[T].sum()
@@ -151,12 +155,12 @@ def compare_v5(city, T_ids, P, SCN, prov=None, *, walk_access=None):
     for name, sh in [('Как есть', None)] + list(SCN.items()):
         if sh is None:
             N, J, J_A, d = popT0, jobsT0, jobsT0_A, None
+            capacity = None
             capS = t.cap_school.iloc[list(E) + T].sum(); capK = t.cap_kinder.iloc[list(E) + T].sum()
         else:
             d = normalize(sh)
             N = F * d['Ж'] * P['k_liv'] / P['q']
-            J = F * (d['К'] / P['a_К'] + d['ОД'] / P['a_ОД'] + d['П'] / P['a_П'])
-            J_A = J
+            J, J_A, capacity, jobs_by_function = scenario_employment(S, kit, d, P, rates)
             capS, capK = t.cap_school.iloc[E].sum(), t.cap_kinder.iloc[E].sum()
         acc, eff = {}, {}
         changes = {g: {} for g in ('К', 'ОД')}
@@ -194,6 +198,10 @@ def compare_v5(city, T_ids, P, SCN, prov=None, *, walk_access=None):
                          sT=N * P['n_school'] / 1000, kT=N * P['n_kinder'] / 1000,
                          sP=100 * capS / nS if nS > 0 else None, kP=100 * capK / nK if nK > 0 else None,
                          sNo=max(0.0, N * P['n_school'] / 1000 - freeS), kNo=max(0.0, N * P['n_kinder'] / 1000 - freeK))
+        if d is not None:
+            out[name]['jobs_by_function'] = jobs_by_function
+        if rates is not None:
+            out[name]['J_capacity'] = capacity
     names = list(out)
     if prov:                                   # 12.5: школы и сады — blocksnet; дети без места = дети − из них обеспечены
         for n in names:
@@ -226,27 +234,38 @@ def compare_v5(city, T_ids, P, SCN, prov=None, *, walk_access=None):
     if len(city['pts']['остановка']):
         info['до остановки, м'] = int(round(dist_points_to_polys(city['pts']['остановка'], Tpolys).min()))
     warns = list(kit_warns) + list((prov or {}).get('_warnings', []))
+    if rates is not None:
+        info['рабочие места в вариантах'] = 'оценка по кварталам-аналогам, ограниченная вместимостью'
+        info['аналоги занятости (окружение / остальной набор)'] = ', '.join(
+            f'{g}: {local}/{reference}' for g, (_, _, local, reference) in rates.items())
+        used = [g for g in rates if any(sh[g] > 0 for sh in SCN.values())]
+        from_city = [g for g in used if rates[g][2] == 0 and rates[g][3] > 0]
+        missing = [g for g in used if rates[g][2] == 0 and rates[g][3] == 0]
+        if from_city:
+            warns.append(f'Рабочие места: для {", ".join(from_city)} использованы аналоги за пределами окружения.')
+        if missing:
+            warns.append(f'Рабочие места: для {", ".join(missing)} нет аналогов в наборе. '
+                         'Вклад этих функций показан только во вместимости.')
     maxJ = max(out[n]['Jcity'] for n in names[1:]) if len(names) > 1 else 0
     maxN = max(out[n]['N'] for n in names[1:]) if len(names) > 1 else 0
-    if maxJ > CITY_SHARE or maxN > CITY_SHARE / 100 * popA:   # 10 % рабочих мест или жителей набора (18.2а)
-        warns.append(f'Масштаб: вариант добавляет до {fmt(maxJ)} % рабочих мест всего набора и до {fmt(maxN)} жителей '
-                     f'(во всём наборе {fmt(popA)}). Варианты различаются объёмом застройки сильнее, чем сочетанием функций. '
-                     'Проверьте КИТ или уменьшите территорию.')
+    if maxJ > CITY_SHARE or maxN > CITY_SHARE / 100 * popA:
+        warns.append(f'Масштаб: на территории до {fmt(maxJ)} % от исходного числа рабочих мест набора '
+                     f'и до {fmt(maxN)} жителей (во всём наборе {fmt(popA)}). Проверьте КИТ и границы территории.')
     info['предупреждения'] = warns
     return full, info, {'T': T, 'E': E, 'effect': effect, 'effect_by_function': effect_by_function,
-                        'access_method': method, 'short': short, 'conclusions': concl, 'values': out, 'city': to_city}
+                        'access_method': method, 'jobs_method': 'local' if rates is not None else 'legacy',
+                        'short': short, 'conclusions': concl, 'values': out, 'city': to_city}
 
 
 def _acc(o, g):
     return '—' if o['d'] is None else f"+{fmt(o['acc'][g][0])} / −{fmt(o['acc'][g][1])}"
 
 
-CITY_SHARE = 10.0      # %: вариант добавляет больше этой доли жителей или рабочих мест набора — сравнение с городом (18.2а)
+CITY_SHARE = 10.0      # %: жители или рабочие места варианта относительно всего исходного набора (18.2а)
 
 
 def city_scale(out, popA):
-    """Сравнение с городом целиком нужно (ТЗ 18.2а), если хотя бы один вариант добавляет больше CITY_SHARE %
-    рабочих мест или жителей всего набора: малый город или большая территория."""
+    """Сравнение с городом нужно (ТЗ 18.2а), если J или N варианта превышают CITY_SHARE % от исходного набора."""
     names = [n for n in out if out[n]['d'] is not None]
     return any(out[n]['Jcity'] > CITY_SHARE or (popA and 100 * out[n]['N'] / popA > CITY_SHARE) for n in names)
 
@@ -257,6 +276,8 @@ def detailed_column(o):
     return {
         'Жители на территории N': int(round(o['N'])), 'Рабочие места на территории J': int(round(o['J'])),
         'Изменение рабочих мест к нынешним': '—' if now else int(round(o['dJ'])),
+        **({'Вместимость проектной площади, рабочих мест':
+            '—' if now else int(round(o['J_capacity']))} if 'J_capacity' in o else {}),
         'Доля нежилых площадей, %': '' if now else round(100 * (1 - o['d']['Ж'])),
         'J, % рабочих мест всего набора': round(o['Jcity'], 1),
         'N, % жителей всего набора': round(o['Ncity'], 1),

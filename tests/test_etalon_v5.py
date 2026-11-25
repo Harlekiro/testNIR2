@@ -1,4 +1,4 @@
-"""Эталоны правил v5 и исторические сценарии ноутбука Высоцка и Гатчины.
+"""Эталоны v5 для пакета и исследовательской части ноутбука.
 
 Эталоны посчитаны командой `python -m mixuse compare configs/<код>.yaml --out tests/etalon/v5/<код>` (19.11.2026).
 Петербург: проверяются таблица кварталов, сравнение, шаг 7 и 4.8.3–4.8.4; шаг 7б и 4.8.5 (по 3–4 пересчёта
@@ -56,6 +56,7 @@ def run(request):
     cfg = load_config(os.path.join(ROOT, 'configs', f'{code}.yaml'))
     if not os.path.exists(cfg['blocks']):
         pytest.skip(f'нет данных набора {code}')
+    cfg['params']['jobs_method'] = 'legacy'
     if code == 'spb_full':
         # Эталоны Петербурга зафиксированы до обновления долей по умолчанию.
         cfg['scenarios'] = HISTORICAL_SCENARIOS
@@ -94,15 +95,14 @@ def test_checks(run):
 
 @pytest.mark.parametrize('code', ['vysotsk', 'gatchina_layers'])
 def test_notebook_v5(code, tmp_path):
-    """Ноутбук воспроизводит эталоны для своих явно заданных сценариев."""
+    """Исследовательская часть ноутбука использует текущие пять сценариев пакета."""
     cfg = load_config(os.path.join(ROOT, 'configs', f'{code}.yaml'))
     if not os.path.exists(cfg['blocks']):
         pytest.skip(f'нет данных набора {code}')
     out = str(tmp_path)
-    run_notebook(code, out)
+    run_notebook(code, out, jobs_method='legacy')
     got = lambda name, **kw: pd.read_csv(os.path.join(out, f'{code}_{name}.csv'), encoding='utf-8-sig', **kw)
     same_table(ref(code, 'таблица_кварталов'), got('таблица_кварталов'))
     for name, kw in [('сравнение_вариантов', {'index_col': 0}), ('сравнение_подробно', {'index_col': 0}),
                      ('устойчивость', {}), ('встроенные', {}), ('оценки', {}), ('порог_цеха', {}), ('здания', {})]:
-        path = notebook_reference_path(code, f'{code}_{name}.csv')
-        same_strings(pd.read_csv(path, encoding='utf-8-sig', **kw, **STR), got(name, **kw, **STR))
+        same_strings(ref(code, name, **kw, **STR), got(name, **kw, **STR))

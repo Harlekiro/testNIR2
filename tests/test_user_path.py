@@ -22,7 +22,7 @@ import zipfile
 import pandas as pd
 import pytest
 
-from conftest import ROOT, ETALON_V5, same_strings
+from conftest import ROOT, ETALON_V5, HISTORICAL_SCENARIOS, same_strings
 from test_etalon_v5 import notebook_reference_path, same_table, STR
 from user_forms import FORMS
 
@@ -67,6 +67,7 @@ def fill_notebook(path, code):
     form, params, _ = FORMS[code]
     nb = json.load(open(path, encoding='utf-8'))
     done = set()
+    modern = False
     for c in nb['cells']:
         s = ''.join(c['source'])
         if c['cell_type'] != 'code':
@@ -74,18 +75,30 @@ def fill_notebook(path, code):
         if s.startswith('# ===== ШАГ 0. ВАШИ ДАННЫЕ'):
             a, b = s.index('ДАННЫЕ = dict('), s.index('ТАБЛИЦА_ГРУПП =')
             s = s[:a] + form + s[b:]
+            modern = 'ИССЛЕДОВАНИЕ = False' in s
+            if modern:
+                s = s.replace('ИССЛЕДОВАНИЕ = False', 'ИССЛЕДОВАНИЕ = True')
             done.add('анкета')
         elif s.startswith('P = dict('):
             for k, v in params.items():
                 s, n = re.subn(rf'^(\s*{k}=)[^,\n]+,', lambda m: m.group(1) + repr(v) + ',', s, count=1, flags=re.M)
                 assert n == 1, k
             done.add('P')
+        elif 'P = defaults()' in s:
+            historical = dict(params, jobs_method='legacy')
+            s = s.replace('P = defaults()', f'P = defaults()\nP.update({historical!r})')
+            done.add('P')
+        elif code == 'spb_full' and 'SCN = paired_scenarios()' in s:
+            # Сравнение CSV Петербурга закреплено на историческом наборе, а JSON — на текущем.
+            end = s.index('\n', s.index('SCN = paired_scenarios()'))
+            s = s[:end] + f'\nSCN = {HISTORICAL_SCENARIOS!r}' + s[end:]
         else:
             continue
         t = s.split('\n')
         c['source'] = [x + '\n' for x in t[:-1]] + ([t[-1]] if t[-1] else [])
     assert 'анкета' in done and ('P' in done or not params)
     json.dump(nb, open(path, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    return modern
 
 
 def run_all(prog, nb):
@@ -109,21 +122,26 @@ def test_acceptance_as_user(code, tmp_path):
     assert not os.path.exists(os.path.join(prog, 'results', f'{code}_user_таблица_кварталов.csv'))
     put_layers(code, prog)
     nb = os.path.join(prog, 'метод_сравнения_вариантов.ipynb')
-    fill_notebook(nb, code)
+    modern = fill_notebook(nb, code)
     out = run_all(prog, nb)
     assert 'MIXUSE_FROM ' + os.path.join(prog, 'mixuse') in out.replace('/', os.sep), 'mixuse взят не из скачанной папки'
     ref_dir = os.path.join(ETALON_V5, code)
     for name in sorted(os.listdir(ref_dir)):
         got = os.path.join(prog, 'results', name.replace(code + '_', code + '_user_', 1))
         assert os.path.exists(got), got
-        ref = notebook_reference_path(code, name)
+        ref = os.path.join(ref_dir, name) if modern else notebook_reference_path(code, name)
         if name.endswith('таблица_кварталов.csv'):
             same_table(pd.read_csv(ref, encoding='utf-8-sig'), pd.read_csv(got, encoding='utf-8-sig'))
         else:
             kw = {'index_col': 0} if 'сравнение' in name else {}
             same_strings(pd.read_csv(ref, encoding='utf-8-sig', **kw, **STR),
                          pd.read_csv(got, encoding='utf-8-sig', **kw, **STR))
-    assert os.path.exists(os.path.join(prog, 'results', f'{code}_user_для_страницы.json'))
+    path = os.path.join(prog, 'results', f'{code}_user_для_страницы.json')
+    with open(path, encoding='utf-8') as f:
+        data = json.load(f)
+    if modern:
+        from mixuse.params import SCENARIOS, paired_scenarios
+        assert data['scenarios'] == SCENARIOS and data['paired_scenarios'] == paired_scenarios()
 
 
 def test_vysotsk_example_from_clean_archive(tmp_path):
@@ -137,8 +155,11 @@ def test_vysotsk_example_from_clean_archive(tmp_path):
         assert os.path.exists(os.path.join(prog, 'data', 'vysotsk', f)), f'нет в архиве: data/vysotsk/{f}'
     nb = os.path.join(prog, 'метод_сравнения_вариантов.ipynb')
     d = json.load(open(nb, encoding='utf-8'))
+    modern = any('ИССЛЕДОВАНИЕ = False' in ''.join(c['source']) for c in d['cells'])
     for c in d['cells']:
-        c['source'] = [x.replace('ПРИМЕР = None', "ПРИМЕР = 'vysotsk'") for x in c['source']]
+        c['source'] = [x.replace('ПРИМЕР = None', "ПРИМЕР = 'vysotsk'")
+                       .replace('ИССЛЕДОВАНИЕ = False', 'ИССЛЕДОВАНИЕ = True')
+                       .replace('P = defaults()', 'P = defaults()\nP["jobs_method"] = "legacy"') for x in c['source']]
     json.dump(d, open(nb, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     runner = os.path.join(prog, '..', 'run_all.py')
     open(runner, 'w', encoding='utf-8').write(RUNNER + r'''
@@ -159,7 +180,7 @@ print('MATRIX_OK', mx.shape)
     ref_dir = os.path.join(ETALON_V5, 'vysotsk')
     for name in sorted(os.listdir(ref_dir)):
         got = os.path.join(prog, 'results', name)
-        ref = notebook_reference_path('vysotsk', name)
+        ref = os.path.join(ref_dir, name) if modern else notebook_reference_path('vysotsk', name)
         assert os.path.exists(got), got
         if name.endswith('таблица_кварталов.csv'):
             same_table(pd.read_csv(ref, encoding='utf-8-sig'), pd.read_csv(got, encoding='utf-8-sig'))

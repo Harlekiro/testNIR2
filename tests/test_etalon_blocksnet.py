@@ -47,7 +47,7 @@ def run(request):
 def test_comparison_with_blocksnet(run):
     """Краткая и подробная таблицы со строками 12.5 из blocksnet совпадают с эталоном."""
     code, cfg, city, mx = run
-    P, SCN, T = cfg['params'], HISTORICAL_SCENARIOS, cfg['territory']
+    P, SCN, T = dict(cfg['params'], jobs_method='legacy'), HISTORICAL_SCENARIOS, cfg['territory']
     _, _, det = compare(city, T, P, SCN)
     E_ids = city['table']['block_id'].iloc[det['E']].astype(int).tolist()
     prov = pb.variant_provision(city, mx, T, E_ids, det['values'])

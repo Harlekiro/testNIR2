@@ -12,6 +12,7 @@ import numpy as np
 
 from .geometry import roundness
 from .groups import main_norm
+from .employment import JOB_GROUPS
 
 STEP_NAMES = {
     1: '1 (сервисы К, ОД, П)', 2: '2 (социальные объекты)', 3: '3 (сооружения в производственных зонах)',
@@ -78,10 +79,13 @@ def builtin_jobs_v5(b_area, types, group, P, norms):
 def jobs_v5(bdf, bpolys, nr_idx, storeys, types_in, social_in, zone_of_block, bi_types, P, norms, type_group):
     """Рабочие места всех зданий по правилам v5. Добавляет в bdf столбцы step, jobs_A, jobs_B, category.
 
-    Возвращает счётчики допущений для отчёта о данных."""
+    Возвращает счётчики допущений и рабочие места по моделируемым функциям (А+Б и А)."""
     counters = defaultdict(int)
     steps, jA, jB, jBI = np.zeros(len(bdf), int), np.zeros(len(bdf)), np.zeros(len(bdf)), np.zeros(len(bdf))
     fa, fp, blk = bdf['floor_area'].to_numpy(), bdf['footprint'].to_numpy(), bdf['block'].to_numpy()
+    use = bdf['group'].to_numpy()
+    group_index = {group: i for i, group in enumerate(JOB_GROUPS)}
+    by_use = np.zeros((len(bdf), len(JOB_GROUPS), 2))
     st = np.asarray(storeys, float)
     for i in nr_idx:
         k, jobs, info = building_jobs_v5(fa[i], fp[i], st[i], bpolys[i], zone_of_block[blk[i]],
@@ -91,6 +95,9 @@ def jobs_v5(bdf, bpolys, nr_idx, storeys, types_in, social_in, zone_of_block, bi
             jA[i] = jobs
         else:
             jB[i] = jobs
+        # Отдельные социальные объекты остаются в общей занятости, но не калибруют К, ОД и П.
+        if k in (1, 4, 5, 7):
+            by_use[i, group_index[use[i]]] = (jobs, jA[i])
         for key, v in info.items():
             counters[key] += v
     for i, tt in bi_types.items():                       # встроенные помещения — категория А (4.4.5)
@@ -98,10 +105,11 @@ def jobs_v5(bdf, bpolys, nr_idx, storeys, types_in, social_in, zone_of_block, bi
             j, no = builtin_jobs_v5(bdf.at[i, 'bi_' + g], tt[g], g, P, norms)
             jA[i] += j
             jBI[i] += j
+            by_use[i, group_index[g]] += j
             counters['типов без нормы'] += no
     bdf['step'], bdf['jobs_A'], bdf['jobs_B'], bdf['jobs_builtin'] = steps, jA, jB, jBI
     bdf['category'] = [STEP_CATEGORY.get(k, '') for k in steps]
-    return dict(counters)
+    return dict(counters), by_use
 
 
 def steps_report(bdf):

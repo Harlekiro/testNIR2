@@ -34,7 +34,7 @@ const res=[];
 for(const job of A){
   const idx=new Map(B.map((b,i)=>[b.id,i]));const T=job.territory.map(id=>idx.get(id));
   const r=calc(D,B,T,{...D.params,...job.params},D.scenarios,job.kit);
-  const out={};for(const [n,o] of Object.entries(r.out))out[n]={N:o.N,J:o.J,K:o.K,KA:o.KA,Kall:o.Kall,Jcity:o.Jcity,Ncity:o.Ncity,acc:o.acc,
+  const out={};for(const [n,o] of Object.entries(r.out))out[n]={N:o.N,J:o.J,J_A:o.J_A,J_capacity:o.J_capacity,dJ:o.dJ,K:o.K,KA:o.KA,Kall:o.Kall,Jcity:o.Jcity,Ncity:o.Ncity,acc:o.acc,jobsByFunction:o.jobsByFunction,
     sP:o.sP,kP:o.kP,sT:o.sT,kT:o.kT,sNo:o.sNo,kNo:o.kNo,prov:o.prov||null,
     concl:n==='Как есть'?null:conclusion(o,r.out['Как есть'],D.params,r.city)};
   res.push({kit:r.kit,kitE:r.kitE,E:r.E.map(i=>B[i].id),accessLabel:r.accessLabel,effByFunction:r.effByFunction,out});
@@ -109,8 +109,11 @@ def test_page_equals_package(code, tmp_path):
         assert pg['kitE'] == pytest.approx(info['КИТ окружения по данным (для сравнения)'], abs=0.006)
         for name, o in det['values'].items():
             q = pg['out'][name]
-            for key in ('N', 'J', 'K', 'KA', 'Kall', 'Jcity', 'Ncity', 'sT', 'kT', 'sNo', 'kNo'):
-                assert q[key] == pytest.approx(o[key], rel=1e-3, abs=0.01), (T, name, key)
+            for key in ('N', 'J', 'J_A', 'J_capacity', 'dJ', 'K', 'KA', 'Kall', 'Jcity', 'Ncity', 'sT', 'kT', 'sNo', 'kNo'):
+                expected = None if o[key] is None else pytest.approx(o[key], rel=1e-3, abs=0.01)
+                assert q[key] == expected, (T, name, key)
+            if name != 'Как есть':
+                assert q['jobsByFunction'] == pytest.approx(list(o['jobs_by_function'].values()), rel=1e-3, abs=0.01)
             for g in ('К', 'ОД', 'П'):
                 if o['acc']:
                     assert q['acc'][g] == pytest.approx(list(o['acc'][g]), rel=1e-3, abs=0.05), (T, name, g)
@@ -172,6 +175,28 @@ def test_page_renders(code, tmp_path):
     js = tmp_path / 'page_full.js'
     js.write_text(DOM_STUB + script + r'''
 const D0=JSON.parse(require('fs').readFileSync(process.argv[2],'utf8'));
+function checkLayer(method){
+  const assert=require('node:assert/strict');
+  const results=Object.entries(last.out).filter(([name])=>name!=='Как есть');
+  let blob;
+  save=value=>{blob=value;};
+  $('geojson').onclick();
+  return blob.text().then(text=>{
+    const geo=JSON.parse(text), inside=geo.features.filter(f=>f.properties.территория);
+    assert.equal(geo['метод расчёта рабочих мест'],method);
+    for(const [name,o] of results){
+      const sum=key=>inside.reduce((s,f)=>s+f.properties[key],0);
+      assert.ok(Math.abs(sum('рабочие места '+name)-o.J)<1e-7);
+      assert.ok(Math.abs(sum('изменение рабочих мест '+name)-o.dJ)<1e-7);
+      jobGroups.forEach((g,i)=>assert.ok(Math.abs(sum(`занятость_${g} ${name}`)-o.jobsByFunction[i])<1e-7));
+      for(const {properties:p} of geo.features){
+        if(!p.территория)assert.equal(p['рабочие места '+name],p.jobs);
+        const parts=[...jobGroups,'прочие'].map(g=>p[`занятость_${g} ${name}`]);
+        if(parts.every(x=>x!==null))assert.ok(Math.abs(parts.reduce((s,x)=>s+x,0)-p['рабочие места '+name])<1e-7);
+      }
+    }
+  });
+}
 use(D0);
 const res=document.getElementById('res').innerHTML,full=document.getElementById('resFull').innerHTML;
 document.getElementById('scenarioMode').value='paired';
@@ -180,12 +205,23 @@ const joint=document.getElementById('res').innerHTML;
 const access=document.getElementById('accessMode'),threshold=document.getElementById('walkMinutes');
 access.value='walk';access.onchange();
 const network=document.getElementById('res').innerHTML;
+const pair=document.getElementById('pairResults').innerHTML;
+const parameters=document.getElementById('parameterHelp').innerHTML;
+const layer=checkLayer('local');
+const shown=document.getElementById('showSel').value;
+last.effByFunction[shown]={'К':{0:1},'ОД':{0:-1}};
+last.eff[shown]={0:0};draw();
+const separateMarkers=mapMarks.filter(m=>m.i===0).length;
 threshold.value=21;threshold.onchange();
 const rejected=last===null&&document.getElementById('geojson').disabled;
-delete D0.walk_access;use(D0);
+delete D0.walk_access;
+delete D0.employment;delete D0.params.jobs_method;
+D0.blocks.forEach(b=>delete b.employment);
+use(D0);
 const fallback=access.value==='geometry'&&document.getElementById('walkOption').disabled;
-process.stdout.write(JSON.stringify({res,full,kit:document.getElementById('kitSrc').textContent,
-  joint,network,rejected,fallback,info:document.getElementById('info').innerHTML,warn:document.getElementById('warn').innerHTML}));
+Promise.all([layer,checkLayer('legacy')]).then(()=>process.stdout.write(JSON.stringify({
+  res,full,kit:document.getElementById('kitSrc').textContent,
+  joint,network,rejected,fallback,pair,parameters,separateMarkers,info:document.getElementById('info').innerHTML,warn:document.getElementById('warn').innerHTML})));
 ''', encoding='utf-8')
     r = subprocess.run([NODE, str(js), data], capture_output=True, timeout=600)
     assert r.returncode == 0, r.stderr.decode('utf-8', 'replace')
@@ -193,6 +229,8 @@ process.stdout.write(JSON.stringify({res,full,kit:document.getElementById('kitSr
     assert 'Вывод' in out['res'] and 'Жители на территории' in out['res'] and 'Ж+К+ОД' in out['res']
     assert '[эмп.]' not in out['res'] and all(name in out['joint'] for name in paired_scenarios())
     assert 'пешком ≤ 10 мин' in out['network'] and out['rejected'] and out['fallback']
+    assert 'Функциональные доли' in out['pair'] and 'share-chart' in out['pair']
+    assert 'без источника' in out['parameters'] and out['separateMarkers'] == 2
     assert 'обеспеченность окружения в пределах доступности' in out['full']
     assert 'СП 42.13330.2016' in out['kit']                       # Высоцк и Гатчина: КИТ по СП (kit_sp_row)
     assert 'раз плотнее' in out['info'] or 'раз реже' in out['info']
